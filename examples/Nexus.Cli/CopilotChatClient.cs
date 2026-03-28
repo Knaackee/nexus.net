@@ -99,7 +99,7 @@ internal sealed class CopilotChatClient : IChatClient
         using var stream = await response.Content.ReadAsStreamAsync(ct).ConfigureAwait(false);
         using var reader = new StreamReader(stream, Encoding.UTF8);
 
-        while (!reader.EndOfStream && !ct.IsCancellationRequested)
+        while (!ct.IsCancellationRequested)
         {
             var line = await reader.ReadLineAsync(ct).ConfigureAwait(false);
             if (line is null) break;

@@ -50,7 +50,8 @@ public sealed partial class TelemetryAgentMiddleware : IAgentMiddleware
                 NexusTelemetry.CostPerRequest.Record((double)result.EstimatedCost.Value);
             }
 
-            LogAgentCompleted(_logger, task.Id.Value, sw.Elapsed.TotalMilliseconds, result.Status.ToString());
+            var status = result.Status.ToString();
+            LogAgentCompleted(_logger, task.Id.Value, sw.Elapsed.TotalMilliseconds, status);
             return result;
         }
         catch (Exception ex)
