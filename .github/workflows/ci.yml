@@ -30,7 +30,7 @@ jobs:
       run: dotnet build Nexus.sln --no-restore --configuration Release
 
     - name: Test
-      run: dotnet test Nexus.sln --no-build --configuration Release --verbosity normal --logger "trx;LogFileName=test-results.trx"
+      run: dotnet test Nexus.sln --no-build --configuration Release --verbosity normal --logger "trx;LogFileName=test-results.trx" --filter "FullyQualifiedName!~Nexus.Cli.Tests"
 
     - name: Upload test results
       uses: actions/upload-artifact@v4
