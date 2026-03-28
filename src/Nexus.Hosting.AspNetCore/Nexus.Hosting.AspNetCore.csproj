@@ -1,0 +1,11 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>Nexus.Hosting.AspNetCore</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <ProjectReference Include="..\Nexus.Core\Nexus.Core.csproj" />
+    <ProjectReference Include="..\Nexus.Orchestration\Nexus.Orchestration.csproj" />
+    <ProjectReference Include="..\Nexus.Protocols.AgUi\Nexus.Protocols.AgUi.csproj" />
+  </ItemGroup>
+</Project>

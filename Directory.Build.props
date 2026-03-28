@@ -1,0 +1,30 @@
+<Project>
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <LangVersion>12.0</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    <AnalysisLevel>latest-recommended</AnalysisLevel>
+    <!-- CA1711: Delegate suffix is intentional for middleware pipeline delegates -->
+    <!-- CA1716: 'next' and 'function' are idiomatic in middleware/plugin patterns -->
+    <NoWarn>$(NoWarn);CA1711;CA1716</NoWarn>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <Authors>Nexus Contributors</Authors>
+    <Company>Nexus</Company>
+    <Product>Nexus</Product>
+    <Description>Multi-Agent Orchestration Engine for .NET</Description>
+    <RepositoryType>git</RepositoryType>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <Version>0.1.0</Version>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)' == 'Release'">
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+  </PropertyGroup>
+</Project>
