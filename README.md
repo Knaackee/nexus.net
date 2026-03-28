@@ -1,10 +1,12 @@
 # Nexus — Multi-Agent Orchestration Engine
 
 [![CI](https://github.com/your-org/nexus/actions/workflows/ci.yml/badge.svg)](https://github.com/your-org/nexus/actions/workflows/ci.yml)
-[![.NET 8](https://img.shields.io/badge/.NET-8.0-blue)](https://dotnet.microsoft.com/)
+[![.NET 10](https://img.shields.io/badge/.NET-10.0-blue)](https://dotnet.microsoft.com/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-**Nexus** is an enterprise-grade .NET 8 framework for building, orchestrating, and managing multi-agent AI systems. It provides a composable architecture for agent execution, tool integration, memory management, guardrails, protocol support (MCP, A2A, AG-UI), and workflow orchestration.
+**Nexus** is an enterprise-grade .NET 10 framework for building, orchestrating, and managing multi-agent AI systems. It provides a composable architecture for agent execution, tool integration, memory management, guardrails, protocol support (MCP, A2A, AG-UI), and workflow orchestration.
+
+> **[📖 Full Documentation](docs/README.md)** — Architecture guides, API reference, and examples.
 
 ## Architecture
 
@@ -158,6 +160,15 @@ var loader = sp.GetRequiredService<IWorkflowLoader>();
 var workflow = loader.LoadFromString(json, "json");
 var validation = sp.GetRequiredService<IWorkflowValidator>().Validate(workflow);
 ```
+
+## Documentation
+
+Full documentation is in the [`docs/`](docs/README.md) directory:
+
+- **Getting Started** — [Installation](docs/getting-started/installation.md) · [Quick Start](docs/getting-started/quickstart.md) · [CLI](docs/getting-started/cli.md)
+- **Architecture** — [Overview](docs/architecture/overview.md) · [Core Engine](docs/architecture/core-engine.md)
+- **Guides** — [Orchestration](docs/guides/orchestration.md) · [Memory](docs/guides/memory.md) · [Guardrails](docs/guides/guardrails.md) · [Messaging](docs/guides/messaging.md) · [Checkpointing](docs/guides/checkpointing.md) · [Workflows DSL](docs/guides/workflows-dsl.md) · [Protocols](docs/guides/protocols.md) · [Telemetry](docs/guides/telemetry.md) · [Auth](docs/guides/auth.md) · [Testing](docs/guides/testing.md) · [Middleware](docs/guides/middleware.md)
+- **API Reference** — [Core](docs/api/nexus-core.md) · [Orchestration](docs/api/nexus-orchestration.md) · [Memory](docs/api/nexus-memory.md) · [Guardrails](docs/api/nexus-guardrails.md) · [Messaging](docs/api/nexus-messaging.md) · [Workflows DSL](docs/api/nexus-workflows-dsl.md) · [Protocols](docs/api/nexus-protocols.md) · [Testing](docs/api/nexus-testing.md)
 
 ## Building & Testing
 

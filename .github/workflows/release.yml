@@ -1,0 +1,183 @@
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version (e.g. 1.2.3)"
+        required: false
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    env:
+      NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            8.0.x
+            10.0.x
+
+      - name: Resolve version
+        id: version
+        shell: bash
+        run: |
+          if [ "${GITHUB_REF_TYPE}" = "tag" ]; then
+            VERSION="${GITHUB_REF_NAME#v}"
+          elif [ -n "${{ inputs.version }}" ]; then
+            VERSION="${{ inputs.version }}"
+          else
+            echo "::error::Version required — push a v* tag or provide a version input"
+            exit 1
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - run: dotnet restore Nexus.sln
+      - run: dotnet build Nexus.sln -c Release --no-restore
+
+      - name: Run tests
+        run: dotnet test Nexus.sln -c Release --no-build --verbosity normal --logger "trx;LogFileName=results.trx" --results-directory TestResults --filter "FullyQualifiedName!~Nexus.Cli.Tests"
+
+      - name: Pack NuGet packages
+        run: |
+          for proj in \
+            src/Nexus.Core/Nexus.Core.csproj \
+            src/Nexus.Orchestration/Nexus.Orchestration.csproj \
+            src/Nexus.Orchestration.Checkpointing/Nexus.Orchestration.Checkpointing.csproj \
+            src/Nexus.Memory/Nexus.Memory.csproj \
+            src/Nexus.Messaging/Nexus.Messaging.csproj \
+            src/Nexus.Guardrails/Nexus.Guardrails.csproj \
+            src/Nexus.Protocols.A2A/Nexus.Protocols.A2A.csproj \
+            src/Nexus.Protocols.Mcp/Nexus.Protocols.Mcp.csproj \
+            src/Nexus.Protocols.AgUi/Nexus.Protocols.AgUi.csproj \
+            src/Nexus.Auth.OAuth2/Nexus.Auth.OAuth2.csproj \
+            src/Nexus.Telemetry/Nexus.Telemetry.csproj \
+            src/Nexus.Hosting.AspNetCore/Nexus.Hosting.AspNetCore.csproj \
+            src/Nexus.Workflows.Dsl/Nexus.Workflows.Dsl.csproj \
+            src/Nexus.Testing/Nexus.Testing.csproj; do
+            dotnet pack "$proj" -c Release --no-build -o artifacts \
+              /p:PackageVersion=${{ steps.version.outputs.version }} \
+              /p:ContinuousIntegrationBuild=true
+          done
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-packages
+          path: |
+            artifacts/*.nupkg
+            artifacts/*.snupkg
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.version.outputs.version }}
+          generate_release_notes: true
+          files: |
+            artifacts/*.nupkg
+            artifacts/*.snupkg
+
+      # - name: Publish to NuGet
+      #   if: ${{ env.NUGET_API_KEY != '' }}
+      #   run: |
+      #     dotnet nuget push "artifacts/*.nupkg" --api-key "$NUGET_API_KEY" --source "https://api.nuget.org/v3/index.json" --skip-duplicate
+      #     dotnet nuget push "artifacts/*.snupkg" --api-key "$NUGET_API_KEY" --source "https://api.nuget.org/v3/index.json" --skip-duplicate
+
+  build-binaries:
+    needs: release
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            rid: linux-x64
+          - os: ubuntu-latest
+            rid: linux-arm64
+          - os: macos-latest
+            rid: osx-arm64
+          - os: windows-latest
+            rid: win-x64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            8.0.x
+            10.0.x
+
+      - name: Publish self-contained binary
+        run: >
+          dotnet publish examples/Nexus.Cli/Nexus.Cli.csproj -c Release
+          -r ${{ matrix.rid }}
+          --self-contained
+          -p:PublishSingleFile=true
+          -p:PublishTrimmed=false
+          -p:Version=${{ needs.release.outputs.version }}
+          -o dist/${{ matrix.rid }}
+
+      - name: Collect single-file asset
+        shell: pwsh
+        run: |
+          $rid = "${{ matrix.rid }}"
+          $outDir = Join-Path "dist" $rid
+          $files = Get-ChildItem $outDir -File
+
+          if (-not (Test-Path $outDir)) {
+            Write-Error "Publish output directory not found: $outDir"
+            exit 1
+          }
+
+          if ("${{ matrix.os }}" -eq "windows-latest") {
+            $candidate = $files | Where-Object { $_.Extension -eq ".exe" } | Sort-Object Length -Descending | Select-Object -First 1
+            $targetName = "nexus-cli-$rid.exe"
+          }
+          else {
+            $candidate = $files |
+              Where-Object {
+                $_.Name -notlike "*.pdb" -and
+                $_.Name -notlike "*.dll" -and
+                $_.Name -notlike "*.json" -and
+                $_.Name -notlike "*.deps.json" -and
+                $_.Name -notlike "*.runtimeconfig.json" -and
+                $_.Name -notlike "*.so" -and
+                $_.Name -notlike "*.dylib" -and
+                $_.Name -notlike "*.a" -and
+                $_.Name -notlike "*.dbg" -and
+                $_.Name -notlike "*.xml"
+              } |
+              Sort-Object Length -Descending |
+              Select-Object -First 1
+
+            if (-not $candidate) {
+              $candidate = $files | Sort-Object Length -Descending | Select-Object -First 1
+            }
+            $targetName = "nexus-cli-$rid"
+          }
+
+          if (-not $candidate) {
+            Write-Error "Could not find single executable in $outDir"
+            Get-ChildItem $outDir -File | Select-Object Name, Length
+            exit 1
+          }
+
+          New-Item -ItemType Directory -Path "release-assets" -Force | Out-Null
+          Copy-Item $candidate.FullName (Join-Path "release-assets" $targetName)
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ needs.release.outputs.version }}
+          files: release-assets/*
