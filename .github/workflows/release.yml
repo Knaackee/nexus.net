@@ -93,8 +93,11 @@ jobs:
       - name: Publish to NuGet
         if: ${{ env.NUGET_API_KEY != '' }}
         run: |
-          dotnet nuget push "artifacts/*.nupkg" --api-key "$NUGET_API_KEY" --source "https://api.nuget.org/v3/index.json" --skip-duplicate
-          dotnet nuget push "artifacts/*.snupkg" --api-key "$NUGET_API_KEY" --source "https://api.nuget.org/v3/index.json" --skip-duplicate
+          for pkg in artifacts/*.nupkg artifacts/*.snupkg; do
+            if ! dotnet nuget push "$pkg" --api-key "$NUGET_API_KEY" --source "https://api.nuget.org/v3/index.json" --skip-duplicate; then
+              echo "::warning::Failed to publish $pkg. Continuing release; verify NuGet API key permissions for this package ID."
+            fi
+          done
 
   build-binaries:
     needs: release
