@@ -163,6 +163,131 @@ public sealed class StandardToolTests
     }
 
     [Fact]
+    public async Task AgentTool_Can_Run_Multiple_SubAgents_In_Parallel()
+    {
+        using var serviceProvider = new ServiceCollection().BuildServiceProvider();
+        var pool = new RecordingAgentPool(TimeSpan.FromMilliseconds(75));
+        var tool = new AgentTool(pool, serviceProvider);
+
+        var result = await tool.ExecuteAsync(Parse("""
+            {
+              "maxConcurrency": 2,
+              "tasks": [
+                { "agent": "Researcher", "task": "Collect facts" },
+                { "agent": "Reviewer", "task": "Review draft" }
+              ]
+            }
+            """), CreateToolContext(), CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        var batch = (AgentBatchToolResult)result.Value!;
+        batch.Status.Should().Be("Success");
+        batch.CompletedCount.Should().Be(2);
+        batch.FailedCount.Should().Be(0);
+        batch.Results.Should().HaveCount(2);
+        batch.Results.Select(item => item.Text).Should().Contain(["Researcher:Collect facts", "Reviewer:Review draft"]);
+        pool.MaxObservedConcurrency.Should().BeGreaterThan(1);
+    }
+
+    [Fact]
+    public async Task AgentTool_Batch_Reports_Failures_Without_Failing_Whole_Tool()
+    {
+        using var serviceProvider = new ServiceCollection().BuildServiceProvider();
+        var pool = new RecordingAgentPool(failingAgents: ["Reviewer"]);
+        var tool = new AgentTool(pool, serviceProvider);
+
+        var result = await tool.ExecuteAsync(Parse("""
+            {
+              "tasks": [
+                { "agent": "Researcher", "task": "Collect facts" },
+                { "agent": "Reviewer", "task": "Review draft" }
+              ]
+            }
+            """), CreateToolContext(), CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        var batch = (AgentBatchToolResult)result.Value!;
+        batch.Status.Should().Be("PartialSuccess");
+        batch.CompletedCount.Should().Be(1);
+        batch.FailedCount.Should().Be(1);
+        batch.Results.Should().Contain(item => item.Agent == "Reviewer" && item.IsSuccess == false);
+    }
+
+    [Fact]
+    public async Task AgentTool_Single_Request_Failure_Returns_Tool_Failure()
+    {
+        using var serviceProvider = new ServiceCollection().BuildServiceProvider();
+        var pool = new RecordingAgentPool(failingAgents: ["Reviewer"]);
+        var tool = new AgentTool(pool, serviceProvider);
+
+        var result = await tool.ExecuteAsync(Parse("""
+            { "agent": "Reviewer", "task": "Review draft" }
+            """), CreateToolContext(), CancellationToken.None);
+
+        result.IsSuccess.Should().BeFalse();
+        result.Error.Should().Contain("Reviewer failed");
+    }
+
+    [Fact]
+    public async Task AgentTool_Empty_Batch_Returns_Tool_Failure()
+    {
+        using var serviceProvider = new ServiceCollection().BuildServiceProvider();
+        var tool = new AgentTool(new RecordingAgentPool(), serviceProvider);
+
+        var result = await tool.ExecuteAsync(Parse("""
+            { "tasks": [] }
+            """), CreateToolContext(), CancellationToken.None);
+
+        result.IsSuccess.Should().BeFalse();
+        result.Error.Should().Contain("at least one entry");
+    }
+
+    [Fact]
+    public async Task AgentTool_Batch_Uses_Default_ToolNames_For_Requests()
+    {
+        using var serviceProvider = new ServiceCollection().BuildServiceProvider();
+        var pool = new RecordingAgentPool();
+        var registry = new DefaultToolRegistry();
+        var tool = new AgentTool(pool, serviceProvider);
+
+        var result = await tool.ExecuteAsync(Parse("""
+            {
+              "toolNames": ["grep", "file_read"],
+              "tasks": [
+                { "agent": "Researcher", "task": "Collect facts" },
+                { "agent": "Reviewer", "task": "Review draft", "toolNames": ["shell"] }
+              ]
+            }
+            """), CreateToolContext(registry), CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        pool.SpawnedDefinitions.Should().HaveCount(2);
+        pool.SpawnedDefinitions[0].ToolNames.Should().ContainInOrder("grep", "file_read");
+        pool.SpawnedDefinitions[1].ToolNames.Should().ContainSingle().Which.Should().Be("shell");
+    }
+
+    [Fact]
+    public async Task AgentTool_MaxConcurrency_Lower_Than_One_Is_Coerced_To_One()
+    {
+        using var serviceProvider = new ServiceCollection().BuildServiceProvider();
+        var pool = new RecordingAgentPool(TimeSpan.FromMilliseconds(50));
+        var tool = new AgentTool(pool, serviceProvider);
+
+        var result = await tool.ExecuteAsync(Parse("""
+            {
+              "maxConcurrency": 0,
+              "tasks": [
+                { "agent": "A", "task": "First" },
+                { "agent": "B", "task": "Second" }
+              ]
+            }
+            """), CreateToolContext(), CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        pool.MaxObservedConcurrency.Should().Be(1);
+    }
+
+    [Fact]
     public void AddStandardTools_Registers_Discovered_Tools_In_Registry()
     {
         var services = new ServiceCollection();
@@ -235,5 +360,97 @@ public sealed class StandardToolTests
 
         public Task<UserResponse> AskAsync(UserQuestion question, UserInteractionOptions? options = null, CancellationToken ct = default)
             => Task.FromResult(_response);
+    }
+
+    private sealed class RecordingAgentPool : IAgentPool
+    {
+        private readonly TimeSpan _delay;
+        private readonly HashSet<string> _failingAgents;
+        private int _activeExecutions;
+
+        public RecordingAgentPool(TimeSpan? delay = null, IReadOnlyCollection<string>? failingAgents = null)
+        {
+            _delay = delay ?? TimeSpan.Zero;
+            _failingAgents = failingAgents is null
+                ? []
+                : new HashSet<string>(failingAgents, StringComparer.Ordinal);
+        }
+
+        public int MaxObservedConcurrency { get; private set; }
+
+        public List<AgentDefinition> SpawnedDefinitions { get; } = [];
+
+        public IReadOnlyList<IAgent> ActiveAgents => [];
+
+        public IObservable<AgentLifecycleEvent> Lifecycle => throw new NotSupportedException();
+
+        public Task CheckpointAndStopAllAsync(ICheckpointStore store, CancellationToken ct = default) => Task.CompletedTask;
+
+        public Task DrainAsync(TimeSpan timeout, CancellationToken ct = default) => Task.CompletedTask;
+
+        public Task KillAsync(AgentId id, CancellationToken ct = default) => Task.CompletedTask;
+
+        public Task PauseAsync(AgentId id, CancellationToken ct = default) => Task.CompletedTask;
+
+        public Task ResumeAsync(AgentId id, CancellationToken ct = default) => Task.CompletedTask;
+
+        public Task<IAgent> SpawnAsync(AgentDefinition definition, CancellationToken ct = default)
+        {
+            SpawnedDefinitions.Add(definition);
+            return Task.FromResult<IAgent>(new RecordingAgent(definition.Name, definition.Name, _delay, _failingAgents.Contains(definition.Name), this));
+        }
+
+        private void Enter()
+        {
+            var current = Interlocked.Increment(ref _activeExecutions);
+            MaxObservedConcurrency = Math.Max(MaxObservedConcurrency, current);
+        }
+
+        private void Exit() => Interlocked.Decrement(ref _activeExecutions);
+
+        private sealed class RecordingAgent : IAgent
+        {
+            private readonly string _responsePrefix;
+            private readonly TimeSpan _delay;
+            private readonly bool _shouldFail;
+            private readonly RecordingAgentPool _owner;
+
+            public RecordingAgent(string name, string responsePrefix, TimeSpan delay, bool shouldFail, RecordingAgentPool owner)
+            {
+                Name = name;
+                _responsePrefix = responsePrefix;
+                _delay = delay;
+                _shouldFail = shouldFail;
+                _owner = owner;
+            }
+
+            public AgentId Id { get; } = AgentId.New();
+            public string Name { get; }
+            public AgentState State => AgentState.Idle;
+
+            public async Task<AgentResult> ExecuteAsync(AgentTask task, IAgentContext context, CancellationToken ct = default)
+            {
+                _owner.Enter();
+                try
+                {
+                    if (_delay > TimeSpan.Zero)
+                        await Task.Delay(_delay, ct);
+
+                    if (_shouldFail)
+                        throw new InvalidOperationException($"{Name} failed");
+
+                    return AgentResult.Success($"{_responsePrefix}:{task.Description}");
+                }
+                finally
+                {
+                    _owner.Exit();
+                }
+            }
+
+            public async IAsyncEnumerable<Nexus.Core.Events.AgentEvent> ExecuteStreamingAsync(AgentTask task, IAgentContext context, [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken ct = default)
+            {
+                yield return new Nexus.Core.Events.AgentCompletedEvent(Id, await ExecuteAsync(task, context, ct));
+            }
+        }
     }
 }

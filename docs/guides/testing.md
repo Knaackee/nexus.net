@@ -201,3 +201,19 @@ public async Task Real_copilot_api_responds()
     Assert.NotNull(response.Message.Text);
 }
 ```
+
+## Benchmarking Runtime Paths
+
+For performance-sensitive changes, run the benchmark suite alongside unit tests.
+
+```bash
+dotnet run -c Release --project benchmarks/Nexus.Benchmarks
+dotnet run -c Release --project benchmarks/Nexus.Benchmarks -- --filter *Workflow*
+dotnet run -c Release --project benchmarks/Nexus.Benchmarks -- --filter *SubAgent*
+```
+
+This is especially useful when you change:
+
+- workflow compilation
+- orchestration scheduling
+- sub-agent delegation

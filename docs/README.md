@@ -7,7 +7,7 @@ Complete documentation for the Nexus Multi-Agent Orchestration Engine.
 ### Getting Started
 
 - [Installation](getting-started/installation.md) — NuGet packages and project setup
-- [Quick Start](getting-started/quickstart.md) — Your first agent in 5 minutes
+- [Quick Start Entry](getting-started/quickstart.md) — Jump from setup into the runnable guide
 - [Nexus CLI](getting-started/cli.md) — Interactive multi-chat coding agent
 
 ### Architecture
@@ -17,7 +17,9 @@ Complete documentation for the Nexus Multi-Agent Orchestration Engine.
 
 ### Guides
 
+- [Quick Start](guides/quick-start.md) — The fastest runnable setup from DI to first task
 - [Orchestration](guides/orchestration.md) — Graph, sequence, parallel, and hierarchical execution
+- [Sub-Agents](guides/sub-agents.md) — Single and batched child-agent delegation
 - [External Brain & Task System](guides/external-brain-task-system.md) — Using Nexus with a task backend and a graph-database brain such as Ladybug
 - [Memory & Context](guides/memory.md) — Conversation history, working memory, context windows
 - [Guardrails](guides/guardrails.md) — PII redaction, prompt injection detection, content safety
@@ -39,6 +41,7 @@ Complete documentation for the Nexus Multi-Agent Orchestration Engine.
 - [Single Agent With Tools](recipes/single-agent-with-tools.md) — Smallest useful setup for one tool-using assistant
 - [Chat Session With Memory](recipes/chat-session-with-memory.md) — Session-aware loop with compaction and recall
 - [Human-Approved Workflow](recipes/human-approved-workflow.md) — Research, plan, execute, review with approval gates
+- [Parallel Sub-Agents And Workflow Fan-Out](recipes/parallel-subagents-and-workflow-fanout.md) — Fast specialist fan-out followed by deterministic merge stages
 - [Task System + Graph Brain](recipes/task-system-graph-brain.md) — Nexus over an external task backend and Ladybug-style graph memory
 
 ### API Reference
@@ -59,3 +62,7 @@ Complete documentation for the Nexus Multi-Agent Orchestration Engine.
 - [Minimal Agent](examples/minimal.md) — Single agent with tools and guardrails
 - [Multi-Agent Graph](examples/multi-agent.md) — Graph orchestration with checkpointing
 - [Nexus CLI](examples/nexus-cli.md) — GitHub Copilot multi-chat agent
+
+### Benchmarks
+
+- [Benchmarks README](../benchmarks/README.md) — Run and interpret the runtime benchmark suite

@@ -34,6 +34,7 @@ public sealed class DefaultOrchestrator : IOrchestrator, IDisposable
         ITaskGraph graph, OrchestrationOptions options, CancellationToken ct = default)
     {
         var results = new ConcurrentDictionary<TaskId, AgentResult>();
+        var skipped = new HashSet<TaskId>();
         var sw = Stopwatch.StartNew();
 
         await foreach (var evt in ExecuteGraphStreamingAsync(graph, options, ct))
@@ -42,14 +43,16 @@ public sealed class DefaultOrchestrator : IOrchestrator, IDisposable
                 results[completed.NodeId] = completed.Result;
             else if (evt is NodeFailedEvent failed)
                 results[failed.NodeId] = AgentResult.Failed(failed.Error.Message);
+            else if (evt is NodeSkippedEvent skippedEvent)
+                skipped.Add(skippedEvent.NodeId);
         }
 
         sw.Stop();
-        var allCompleted = results.Values.All(r => r.Status == AgentResultStatus.Success);
+        var hasFailures = results.Values.Any(r => r.Status != AgentResultStatus.Success);
 
         return new OrchestrationResult
         {
-            Status = allCompleted ? OrchestrationStatus.Completed : OrchestrationStatus.PartiallyCompleted,
+            Status = hasFailures ? OrchestrationStatus.PartiallyCompleted : OrchestrationStatus.Completed,
             TaskResults = results,
             Duration = sw.Elapsed,
         };
@@ -68,8 +71,9 @@ public sealed class DefaultOrchestrator : IOrchestrator, IDisposable
             throw new InvalidOperationException($"Graph validation failed: {string.Join(", ", validation.Errors)}");
 
         var defaultGraph = (DefaultTaskGraph)graph;
-        var completedIds = new HashSet<TaskId>();
         var completedResults = new ConcurrentDictionary<TaskId, AgentResult>();
+        var terminalIds = new HashSet<TaskId>();
+        var skippedIds = new HashSet<TaskId>();
         var sem = new SemaphoreSlim(options.MaxConcurrentNodes);
         var channel = Channel.CreateUnbounded<OrchestrationEvent>(new UnboundedChannelOptions { SingleReader = true });
 
@@ -81,11 +85,34 @@ public sealed class DefaultOrchestrator : IOrchestrator, IDisposable
         {
             try
             {
-                while (completedIds.Count < graph.Nodes.Count && !linkedCt.IsCancellationRequested)
+                while (terminalIds.Count < graph.Nodes.Count && !linkedCt.IsCancellationRequested)
                 {
-                    var ready = defaultGraph.GetReadyNodes(completedIds);
+                    TaskNodeSchedulingPlan plan;
+                    lock (terminalIds)
+                    {
+                        plan = defaultGraph.CreateSchedulingPlan(terminalIds, completedResults, skippedIds);
+                    }
+
+                    foreach (var skipped in plan.SkippedNodes)
+                    {
+                        lock (terminalIds)
+                        {
+                            if (!terminalIds.Add(skipped.Node.TaskId))
+                                continue;
+
+                            skippedIds.Add(skipped.Node.TaskId);
+                        }
+
+                        await channel.Writer.WriteAsync(
+                            new NodeSkippedEvent(graph.Id, skipped.Node.TaskId, skipped.Reason), linkedCt).ConfigureAwait(false);
+                    }
+
+                    var ready = plan.ReadyNodes;
                     if (ready.Count == 0)
                     {
+                        if (plan.SkippedNodes.Count > 0)
+                            continue;
+
                         await Task.Delay(50, linkedCt).ConfigureAwait(false);
                         continue;
                     }
@@ -113,7 +140,7 @@ public sealed class DefaultOrchestrator : IOrchestrator, IDisposable
                                     if (evt is AgentCompletedEvent completed)
                                     {
                                         completedResults[node.TaskId] = completed.Result;
-                                        lock (completedIds) { completedIds.Add(node.TaskId); }
+                                        lock (terminalIds) { terminalIds.Add(node.TaskId); }
                                         await channel.Writer.WriteAsync(
                                             new NodeCompletedEvent(graph.Id, node.TaskId, completed.Result), linkedCt).ConfigureAwait(false);
                                     }
@@ -121,7 +148,7 @@ public sealed class DefaultOrchestrator : IOrchestrator, IDisposable
                                     {
                                         var failedResult = AgentResult.Failed(failed.Error.Message);
                                         completedResults[node.TaskId] = failedResult;
-                                        lock (completedIds) { completedIds.Add(node.TaskId); }
+                                        lock (terminalIds) { terminalIds.Add(node.TaskId); }
                                         await channel.Writer.WriteAsync(
                                             new NodeFailedEvent(graph.Id, node.TaskId, failed.Error), linkedCt).ConfigureAwait(false);
                                     }
@@ -131,7 +158,7 @@ public sealed class DefaultOrchestrator : IOrchestrator, IDisposable
                             {
                                 var failedResult = AgentResult.Failed(ex.Message);
                                 completedResults[node.TaskId] = failedResult;
-                                lock (completedIds) { completedIds.Add(node.TaskId); }
+                                lock (terminalIds) { terminalIds.Add(node.TaskId); }
                                 await channel.Writer.WriteAsync(
                                     new NodeFailedEvent(graph.Id, node.TaskId, ex), linkedCt).ConfigureAwait(false);
                             }

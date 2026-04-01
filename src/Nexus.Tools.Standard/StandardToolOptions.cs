@@ -25,6 +25,22 @@ public sealed record WebFetchResult(string Url, int StatusCode, string Content);
 
 public sealed record AgentToolResult(string? Text, string Status, decimal? EstimatedCost);
 
+public sealed record AgentBatchToolResult(
+    IReadOnlyList<AgentToolInvocationResult> Results,
+    string Status,
+    string? Summary,
+    decimal? EstimatedCost,
+    int CompletedCount,
+    int FailedCount);
+
+public sealed record AgentToolInvocationResult(
+    string Agent,
+    string Task,
+    string Status,
+    string? Text,
+    decimal? EstimatedCost,
+    bool IsSuccess);
+
 public sealed record EditResult(string Path, int Replacements);
 
 public sealed record FileWriteResult(string Path, int CharacterCount);

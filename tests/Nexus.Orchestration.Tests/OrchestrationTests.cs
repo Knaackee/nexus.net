@@ -247,6 +247,101 @@ public class DefaultOrchestratorIntegrationTests
         result.TaskResults[node.TaskId].TokenUsage!.TotalTokens.Should().Be(120);
     }
 
+    [Fact]
+    public async Task ExecuteGraphStreamingAsync_Skips_Node_When_No_Conditional_Edge_Matches()
+    {
+        using var services = BuildServices(new UsageAwareOrchestrationChatClient());
+        var pool = new DefaultAgentPool(services);
+        using var orchestrator = new DefaultOrchestrator(pool, services);
+
+        var graph = orchestrator.CreateGraph();
+        var start = graph.AddTask(AgentTask.Create("Start"));
+        var conditional = graph.AddTask(AgentTask.Create("Conditional"));
+        var afterSkip = graph.AddTask(AgentTask.Create("After skip"));
+
+        graph.AddConditionalEdge(start, conditional, result => result.Text?.Contains("missing", StringComparison.OrdinalIgnoreCase) == true);
+        graph.AddDependency(conditional, afterSkip);
+
+        var events = await CollectAsync(orchestrator.ExecuteGraphStreamingAsync(graph));
+
+        events.OfType<NodeSkippedEvent>().Should().ContainSingle(evt => evt.NodeId == conditional.TaskId);
+        events.OfType<NodeSkippedEvent>().Should().ContainSingle(evt => evt.NodeId == afterSkip.TaskId);
+        events.OfType<NodeCompletedEvent>().Should().ContainSingle(evt => evt.NodeId == start.TaskId);
+    }
+
+    [Fact]
+    public async Task ExecuteSequenceAsync_Completes_All_Tasks()
+    {
+        using var services = BuildServices(new UsageAwareOrchestrationChatClient());
+        var pool = new DefaultAgentPool(services);
+        using var orchestrator = new DefaultOrchestrator(pool, services);
+
+        var result = await orchestrator.ExecuteSequenceAsync([
+            AgentTask.Create("First"),
+            AgentTask.Create("Second")]);
+
+        result.Status.Should().Be(OrchestrationStatus.Completed);
+        result.TaskResults.Should().HaveCount(2);
+    }
+
+    [Fact]
+    public async Task ExecuteParallelAsync_Completes_All_Tasks()
+    {
+        using var services = BuildServices(new UsageAwareOrchestrationChatClient());
+        var pool = new DefaultAgentPool(services);
+        using var orchestrator = new DefaultOrchestrator(pool, services);
+
+        var result = await orchestrator.ExecuteParallelAsync([
+            AgentTask.Create("A"),
+            AgentTask.Create("B")]);
+
+        result.Status.Should().Be(OrchestrationStatus.Completed);
+        result.TaskResults.Should().HaveCount(2);
+    }
+
+    [Fact]
+    public async Task ResumeFromCheckpointAsync_Reexecutes_Remaining_Graph()
+    {
+        using var services = BuildServices(new UsageAwareOrchestrationChatClient());
+        var pool = new DefaultAgentPool(services);
+        using var orchestrator = new DefaultOrchestrator(pool, services);
+
+        var graph = orchestrator.CreateGraph();
+        graph.AddTask(AgentTask.Create("Resume me"));
+
+        var snapshot = new OrchestrationSnapshot
+        {
+            Id = CheckpointId.New(),
+            GraphId = graph.Id,
+            NodeStates = new Dictionary<TaskId, TaskNodeState>(),
+            CompletedResults = new Dictionary<TaskId, AgentResult>(),
+            CreatedAt = DateTimeOffset.UtcNow
+        };
+
+        var result = await orchestrator.ResumeFromCheckpointAsync(snapshot, graph);
+
+        result.Status.Should().Be(OrchestrationStatus.Completed);
+        result.TaskResults.Should().HaveCount(1);
+    }
+
+    [Fact]
+    public async Task ExecuteGraphStreamingAsync_Invalid_Graph_Throws()
+    {
+        using var services = BuildServices(new UsageAwareOrchestrationChatClient());
+        var pool = new DefaultAgentPool(services);
+        using var orchestrator = new DefaultOrchestrator(pool, services);
+
+        var graph = orchestrator.CreateGraph();
+        var act = async () =>
+        {
+            await foreach (var _ in orchestrator.ExecuteGraphStreamingAsync(graph))
+            {
+            }
+        };
+
+        await act.Should().ThrowAsync<InvalidOperationException>();
+    }
+
     private static ServiceProvider BuildServices(UsageAwareOrchestrationChatClient client)
     {
         var services = new ServiceCollection();

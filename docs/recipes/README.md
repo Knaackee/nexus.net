@@ -57,6 +57,16 @@ Choose this when:
 - some steps or tools require human confirmation
 - you want a loop plus routing, not just a single task
 
+### I want fast fan-out before a deterministic merge
+
+Use [Parallel Sub-Agents And Workflow Fan-Out](parallel-subagents-and-workflow-fanout.md).
+
+Choose this when:
+
+- one coordinator should delegate specialist work immediately
+- the next stage should still be modeled as an explicit workflow
+- you want separate concurrency limits for local delegation and graph execution
+
 ### I already have a task system and a graph brain
 
 Use [Task System + Graph Brain](task-system-graph-brain.md).
@@ -83,12 +93,14 @@ Typical growth path:
 2. Add sessions and compaction.
 3. Add approvals.
 4. Add workflow routing.
+5. Add bounded fan-out plus deterministic merge.
 
 ## Related Guides
 
-- [Quick Start](../getting-started/quickstart.md)
+- [Quick Start](../guides/quick-start.md)
 - [Orchestration](../guides/orchestration.md)
 - [Memory & Context](../guides/memory.md)
 - [Permissions](../guides/permissions.md)
 - [Workflows DSL](../guides/workflows-dsl.md)
+- [Sub-Agents](../guides/sub-agents.md)
 - [External Brain & Task System](../guides/external-brain-task-system.md)

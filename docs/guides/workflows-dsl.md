@@ -4,6 +4,33 @@ Define agent orchestration pipelines declaratively in JSON or YAML.
 
 If you use `budget.maxCostUsd`, register `AddCostTracking(...)` as well. Runtime cost enforcement depends on provider usage metadata flowing through the cost-tracking wrapper.
 
+Nexus now provides a first-class bridge from the DSL into the orchestration runtime through `IWorkflowGraphCompiler` and `IWorkflowExecutor`.
+
+## Execution Model
+
+```mermaid
+flowchart TD
+    D[WorkflowDefinition]
+    V[IWorkflowValidator]
+    C[IWorkflowGraphCompiler]
+    G[ITaskGraph]
+    O[IOrchestrator]
+    R[OrchestrationResult]
+
+    D --> V
+    V --> C
+    C --> G
+    G --> O
+    O --> R
+```
+
+The key runtime rules are:
+
+- `maxConcurrentNodes` limits how many ready nodes run at once.
+- multiple ready nodes can execute in parallel through the graph orchestrator.
+- conditional edges are evaluated after the source node completes.
+- if all incoming conditions for a node resolve to false, Nexus skips that node explicitly.
+
 ## WorkflowDefinition
 
 The root model for a workflow:
@@ -140,6 +167,22 @@ var workflow = loader.LoadFromString(yamlString, "yaml");
 var workflow = await loader.LoadFromStreamAsync(stream, "json");
 ```
 
+## Compile And Execute
+
+```csharp
+var compiler = sp.GetRequiredService<IWorkflowGraphCompiler>();
+var executor = sp.GetRequiredService<IWorkflowExecutor>();
+
+var compiled = compiler.Compile(workflow, new Dictionary<string, object>
+{
+    ["topic"] = "parallel workflow routing"
+});
+
+var result = await executor.ExecuteAsync(workflow);
+```
+
+Use the compiler when you want access to the generated `ITaskGraph` or resolved `OrchestrationOptions`. Use the executor when you want the full validate-compile-run pipeline.
+
 ## Validation
 
 Validate before execution:
@@ -238,6 +281,35 @@ This makes it possible to branch explicitly when a node exhausts its cost budget
 ```
 
 For this to work in runtime execution, combine workflow budgets with `AddCostTracking(...)` so the default budget tracker receives token and cost updates from the chat client.
+
+## Parallel Fan-Out Example
+
+```json
+{
+    "id": "triage",
+    "name": "Triage",
+    "nodes": [
+        { "id": "classify", "name": "Classifier", "description": "Classify the incident" },
+        { "id": "investigate", "name": "Investigator", "description": "Investigate root cause" },
+        { "id": "draft", "name": "Drafter", "description": "Draft customer update" },
+        { "id": "publish", "name": "Publisher", "description": "Publish approved update" }
+    ],
+    "edges": [
+        { "from": "classify", "to": "investigate" },
+        { "from": "classify", "to": "draft" },
+        {
+            "from": "draft",
+            "to": "publish",
+            "condition": "result.text.contains('approved')"
+        }
+    ],
+    "options": {
+        "maxConcurrentNodes": 2
+    }
+}
+```
+
+After `classify` completes, `investigate` and `draft` can run in parallel because both become ready at the same time.
 
 ## Budget-Aware Execution
 

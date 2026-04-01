@@ -13,6 +13,8 @@ public static class WorkflowDslBuilderExtensions
         services.AddSingleton<IWorkflowValidator, DefaultWorkflowValidator>();
         services.AddSingleton<IVariableResolver, DefaultVariableResolver>();
         services.AddSingleton<IConditionEvaluator, SimpleConditionEvaluator>();
+        services.AddSingleton<IWorkflowGraphCompiler, DefaultWorkflowGraphCompiler>();
+        services.AddSingleton<IWorkflowExecutor, DefaultWorkflowExecutor>();
 
         var registry = new DefaultAgentTypeRegistry();
         services.AddSingleton<IAgentTypeRegistry>(registry);

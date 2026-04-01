@@ -1,237 +1,142 @@
-# Nexus — Multi-Agent Orchestration Engine
+# Nexus
 
 [![CI](https://github.com/your-org/nexus/actions/workflows/ci.yml/badge.svg)](https://github.com/your-org/nexus/actions/workflows/ci.yml)
 [![.NET 10](https://img.shields.io/badge/.NET-10.0-blue)](https://dotnet.microsoft.com/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-**Nexus** is an enterprise-grade .NET 10 framework for building, orchestrating, and managing multi-agent AI systems. It provides a composable architecture for agent execution, tool integration, memory management, guardrails, protocol support (MCP, A2A, AG-UI), and workflow orchestration.
+## Production-Grade Multi-Agent Runtime For .NET
 
-> **[📖 Full Documentation](docs/README.md)** — Architecture guides, API reference, and examples.
+Build agents, workflows, tools, memory, approvals, protocol bridges, and runtime guardrails in one coherent platform.
+
+Nexus is for teams that want multi-agent systems to behave like engineered software: testable, observable, composable, benchmarked, and ready to operate under real constraints.
+
+### Why Teams Pick Nexus
+
+- 🚀 Orchestrate single agents, DAG workflows, parallel branches, fan-out/fan-in graphs, and batched sub-agents
+- 🛡️ Enforce approvals, budgets, guardrails, retries, and checkpointing in the runtime instead of hiding control flow inside prompts
+- 🧠 Combine tools, memory, messaging, and workflow DSLs without inventing custom orchestration glue
+- 🔌 Expose the system through MCP, A2A, AG-UI, and ASP.NET Core hosting endpoints
+- 📊 Track token usage, estimated cost, benchmark hot paths, and validate behavior with deterministic tests
+- 🧪 Ship with test doubles, mocks, workflow tests, orchestration tests, CLI tests, and live integration coverage
+- 🧱 Keep architecture modular across core runtime, protocols, hosting, testing, and standard tools
+- ⚙️ Support human-in-the-loop execution, delegated specialist agents, and explicit workflow branching in the same stack
+- 📚 Offer recipes, guides, benchmarks, and architecture docs for both humans and LLM-assisted development
 
 ## Architecture
 
-```
-┌──────────────────────────────────────────────────────────┐
-│                    Nexus.Hosting.AspNetCore               │
-│              (AG-UI SSE, A2A JSON-RPC, Health)           │
-├──────────────────────────────────────────────────────────┤
-│  Nexus.Protocols.Mcp  │  Nexus.Protocols.A2A  │  AG-UI  │
-├────────────────────────┴───────────────────────┴─────────┤
-│                   Nexus.Workflows.Dsl                    │
-│                  (JSON/YAML Pipelines)                   │
-├──────────────────────────────────────────────────────────┤
-│  Nexus.Orchestration  │  Nexus.Orchestration.Checkpoint  │
-│   (Graph, Sequence,   │     (Snapshot Serialization,     │
-│    Parallel, Hier.)   │      In-Memory Store)            │
-├───────────────────────┴──────────────────────────────────┤
-│  Guardrails  │  Memory  │  Messaging  │  Telemetry  │Auth│
-│  (PII, Inj.) │ (Conv,   │ (PubSub,   │(OTel Traces│OAuth│
-│              │  Working) │  DLQ)      │ & Metrics) │    │
-├──────────────────────────────────────────────────────────┤
-│                      Nexus.Core                          │
-│    Agents · Tools · Pipeline · Events · Contracts · DI   │
-└──────────────────────────────────────────────────────────┘
+```mermaid
+flowchart TD
+    HOST[Nexus.Hosting.AspNetCore]
+    PROTOCOLS[Nexus.Protocols.Mcp • Nexus.Protocols.A2A • Nexus.Protocols.AgUi]
+    DSL[Nexus.Workflows.Dsl]
+    ORCH[Nexus.Orchestration • Nexus.Orchestration.Checkpointing]
+    RUNTIME[Nexus.Memory • Nexus.Messaging • Nexus.Guardrails • Nexus.Permissions • Nexus.CostTracking • Nexus.Telemetry • Nexus.Auth.OAuth2]
+    CORE[Nexus.Core]
+
+    HOST --> PROTOCOLS
+    PROTOCOLS --> ORCH
+    DSL --> ORCH
+    ORCH --> RUNTIME
+    RUNTIME --> CORE
 ```
 
-## Packages
+## Start Here
 
-| Package | Description |
-|---------|-------------|
-| `Nexus.Core` | Agent abstractions, tool registry, pipeline builder, events, DI configuration |
-| `Nexus.Orchestration` | Graph/sequence/parallel/hierarchical execution, agent pool, task graphs |
-| `Nexus.Orchestration.Checkpointing` | In-memory checkpoint store, JSON snapshot serialization |
-| `Nexus.Memory` | Conversation store, working memory, context window management |
-| `Nexus.Messaging` | In-memory message bus, pub/sub, shared state, dead letter queue |
-| `Nexus.Guardrails` | Prompt injection detection, PII redaction, secrets detection, input limits |
-| `Nexus.Permissions` | Rule-based tool approval, interactive prompts, permission middleware |
-| `Nexus.CostTracking` | Provider-agnostic token and USD cost aggregation around `IChatClient` |
-| `Nexus.Telemetry` | OpenTelemetry traces & metrics for agents and tools |
-| `Nexus.Auth.OAuth2` | API key authentication, OAuth2 client credentials, token cache |
-| `Nexus.Protocols.Mcp` | Model Context Protocol tool adapter and host management |
-| `Nexus.Protocols.A2A` | Agent-to-Agent protocol client (JSON-RPC over HTTP) |
-| `Nexus.Protocols.AgUi` | AG-UI event bridge for real-time streaming to frontends |
-| `Nexus.Workflows.Dsl` | Load agent pipelines from JSON/YAML with validation & variable resolution |
-| `Nexus.Hosting.AspNetCore` | ASP.NET Core endpoints for AG-UI (SSE) and A2A, health checks |
-| `Nexus.Testing` | Mock agents, tools, event recording, evaluation harnesses |
+- [Quick Start Guide](docs/guides/quick-start.md)
+- [Documentation Index](docs/README.md)
+- [Installation](docs/getting-started/installation.md)
+- [CLI Getting Started](docs/getting-started/cli.md)
+- [Quick Start Entry](docs/getting-started/quickstart.md)
+- [Recipe Index](docs/recipes/README.md)
+- [Benchmarks README](benchmarks/README.md)
 
-## Quick Start
+## Recipes
 
-```csharp
-using Microsoft.Extensions.AI;
-using Microsoft.Extensions.DependencyInjection;
-using Nexus.CostTracking;
-using Nexus.Core.Agents;
-using Nexus.Core.Configuration;
-using Nexus.Core.Tools;
-using Nexus.Memory;
-using Nexus.Orchestration;
-using Nexus.Permissions;
+- [Single Agent With Tools](docs/recipes/single-agent-with-tools.md)
+- [Chat Session With Memory](docs/recipes/chat-session-with-memory.md)
+- [Human-Approved Workflow](docs/recipes/human-approved-workflow.md)
+- [Parallel Sub-Agents And Workflow Fan-Out](docs/recipes/parallel-subagents-and-workflow-fanout.md)
+- [Task System + Graph Brain](docs/recipes/task-system-graph-brain.md)
 
-var services = new ServiceCollection();
+## Guides
 
-services.AddNexus(nexus =>
-{
-    nexus.UseChatClient(_ => myLlmClient);       // Plug in any IChatClient
-    nexus.AddOrchestration(o => o.UseDefaults());
-    nexus.AddPermissions(p => p
-        .UsePreset(PermissionPreset.Interactive)
-        .UseConsolePrompt());
-    nexus.AddCostTracking(c => c.AddModel("gpt-4o", input: 2.50m, output: 10.00m));
-    nexus.AddMemory(m => m.UseInMemory());
-});
+- [Quick Start](docs/guides/quick-start.md)
+- [Orchestration](docs/guides/orchestration.md)
+- [Sub-Agents](docs/guides/sub-agents.md)
+- [External Brain & Task System](docs/guides/external-brain-task-system.md)
+- [Memory](docs/guides/memory.md)
+- [Guardrails](docs/guides/guardrails.md)
+- [Permissions](docs/guides/permissions.md)
+- [Cost Tracking](docs/guides/cost-tracking.md)
+- [Messaging](docs/guides/messaging.md)
+- [Checkpointing](docs/guides/checkpointing.md)
+- [Workflows DSL](docs/guides/workflows-dsl.md)
+- [Protocols](docs/guides/protocols.md)
+- [Telemetry](docs/guides/telemetry.md)
+- [Auth](docs/guides/auth.md)
+- [Testing](docs/guides/testing.md)
+- [Middleware](docs/guides/middleware.md)
 
-var sp = services.BuildServiceProvider();
+## Architecture Docs
 
-// Register tools
-var tools = sp.GetRequiredService<IToolRegistry>();
-tools.Register(new LambdaTool("get_time", "Current UTC time",
-    (_, _, _) => Task.FromResult(ToolResult.Success(DateTime.UtcNow.ToString("O"))))
-{
-    Annotations = new ToolAnnotations { IsReadOnly = true, IsIdempotent = true }
-});
+- [Architecture Overview](docs/architecture/overview.md)
+- [Core Engine](docs/architecture/core-engine.md)
 
-// Spawn an agent and execute
-var pool = sp.GetRequiredService<IAgentPool>();
-var agent = await pool.SpawnAsync(new AgentDefinition
-{
-    Name = "Assistant",
-    SystemPrompt = "You are a helpful assistant.",
-    Budget = new AgentBudget { MaxCostUsd = 1.00m },
-});
+## API Docs
 
-var orchestrator = sp.GetRequiredService<IOrchestrator>();
-var result = await orchestrator.ExecuteSequenceAsync([
-    AgentTask.Create("Hello!") with { AssignedAgent = agent.Id }
-]);
+- [Nexus.Core](docs/api/nexus-core.md)
+- [Nexus.Orchestration](docs/api/nexus-orchestration.md)
+- [Nexus.Memory](docs/api/nexus-memory.md)
+- [Nexus.Guardrails](docs/api/nexus-guardrails.md)
+- [Nexus.Permissions](docs/api/nexus-permissions.md)
+- [Nexus.CostTracking](docs/api/nexus-cost-tracking.md)
+- [Nexus.Messaging](docs/api/nexus-messaging.md)
+- [Nexus.Workflows.Dsl](docs/api/nexus-workflows-dsl.md)
+- [Nexus.Protocols](docs/api/nexus-protocols.md)
+- [Nexus.Testing](docs/api/nexus-testing.md)
 
-var taskResult = result.TaskResults.Values.First();
-Console.WriteLine(taskResult.Text);
-Console.WriteLine(taskResult.EstimatedCost);
-Console.WriteLine(taskResult.TokenUsage?.TotalTokens);
+## Examples Docs
 
-var tracker = sp.GetRequiredService<ICostTracker>();
-var costs = await tracker.GetSnapshotAsync();
-Console.WriteLine($"Estimated USD: ${costs.TotalCost:F6}");
-```
-
-When the provider returns usage metadata, `UseDefaults()` now propagates token usage and estimated cost into `AgentResult`, and `MaxCostUsd` is enforced through the default budget middleware.
-
-## Multi-Agent Graph
-
-```csharp
-var graph = orchestrator.CreateGraph();
-var research = graph.AddTask(new AgentTask
-{
-    Id = TaskId.New(),
-    Description = "Research AI trends",
-    AssignedAgent = researcher.Id,
-});
-var write = graph.AddTask(new AgentTask
-{
-    Id = TaskId.New(),
-    Description = "Write blog post",
-    AssignedAgent = writer.Id,
-});
-
-graph.AddDependency(research, write);
-
-await foreach (var evt in orchestrator.ExecuteGraphStreamingAsync(graph))
-{
-    // Handle NodeStarted, AgentEventInGraph, NodeCompleted, etc.
-}
-```
-
-## Guardrails
-
-```csharp
-using Nexus.Guardrails;
-using Nexus.Guardrails.BuiltIn;
-
-var pipeline = new DefaultGuardrailPipeline([
-    new PromptInjectionDetector(),
-    new PiiRedactor(GuardrailPhase.Output),
-    new SecretsDetector(),
-    new InputLengthLimiter { MaxTokens = 5000 },
-]);
-
-var result = await pipeline.EvaluateInputAsync(userInput);
-if (!result.IsAllowed)
-    Console.WriteLine($"Blocked: {result.Reason}");
-```
-
-## Workflow DSL
-
-```json
-{
-    "id": "content-pipeline",
-    "name": "Content Pipeline",
-    "nodes": [
-        { "id": "research", "name": "Researcher", "description": "Research topic",
-          "agent": { "tools": ["web_search"], "budget": { "maxCostUsd": 1.0 } } },
-        { "id": "write", "name": "Writer", "description": "Write content" }
-    ],
-    "edges": [
-        { "from": "research", "to": "write" }
-    ]
-}
-```
-
-```csharp
-var loader = sp.GetRequiredService<IWorkflowLoader>();
-var workflow = loader.LoadFromString(json, "json");
-var validation = sp.GetRequiredService<IWorkflowValidator>().Validate(workflow);
-```
-
-## Documentation
-
-Full documentation is in the [`docs/`](docs/README.md) directory:
-
-- **Getting Started** — [Installation](docs/getting-started/installation.md) · [Quick Start](docs/getting-started/quickstart.md) · [CLI](docs/getting-started/cli.md)
-- **Architecture** — [Overview](docs/architecture/overview.md) · [Core Engine](docs/architecture/core-engine.md)
-- **Guides** — [Orchestration](docs/guides/orchestration.md) · [Memory](docs/guides/memory.md) · [Guardrails](docs/guides/guardrails.md) · [Permissions](docs/guides/permissions.md) · [Cost Tracking](docs/guides/cost-tracking.md) · [Messaging](docs/guides/messaging.md) · [Checkpointing](docs/guides/checkpointing.md) · [Workflows DSL](docs/guides/workflows-dsl.md) · [Protocols](docs/guides/protocols.md) · [Telemetry](docs/guides/telemetry.md) · [Auth](docs/guides/auth.md) · [Testing](docs/guides/testing.md) · [Middleware](docs/guides/middleware.md)
-- **API Reference** — [Core](docs/api/nexus-core.md) · [Orchestration](docs/api/nexus-orchestration.md) · [Memory](docs/api/nexus-memory.md) · [Guardrails](docs/api/nexus-guardrails.md) · [Permissions](docs/api/nexus-permissions.md) · [Cost Tracking](docs/api/nexus-cost-tracking.md) · [Messaging](docs/api/nexus-messaging.md) · [Workflows DSL](docs/api/nexus-workflows-dsl.md) · [Protocols](docs/api/nexus-protocols.md) · [Testing](docs/api/nexus-testing.md)
-
-## Building & Testing
-
-```bash
-dotnet build Nexus.sln
-dotnet test Nexus.sln
-```
+- [Minimal Agent](docs/examples/minimal.md)
+- [Multi-Agent Graph](docs/examples/multi-agent.md)
+- [Nexus CLI](docs/examples/nexus-cli.md)
 
 ## Project Structure
 
-```
-src/
-  Nexus.Core/                       Core abstractions & DI
-  Nexus.Orchestration/              Agent pool, orchestrator, task graphs
-  Nexus.Orchestration.Checkpointing/ Snapshot serialization & storage
-  Nexus.Memory/                     Conversation & working memory
-  Nexus.Messaging/                  Message bus & shared state
-  Nexus.Guardrails/                 Input/output guardrails
-    Nexus.Permissions/                Rule-based tool permissions
-    Nexus.CostTracking/               Token and cost aggregation
-  Nexus.Telemetry/                  OpenTelemetry integration
-  Nexus.Auth.OAuth2/                Authentication & token management
-  Nexus.Protocols.Mcp/              MCP tool adapter
-  Nexus.Protocols.A2A/              A2A protocol client
-  Nexus.Protocols.AgUi/             AG-UI event bridge
-  Nexus.Workflows.Dsl/              JSON/YAML workflow loader
-  Nexus.Hosting.AspNetCore/         ASP.NET Core hosting
-  Nexus.Testing/                    Test utilities & mocks
-tests/
-  Nexus.Core.Tests/                 35 unit tests
-  Nexus.Orchestration.Tests/        14 unit tests
-  Nexus.Memory.Tests/               12 unit tests
-  Nexus.Messaging.Tests/            11 unit tests
-  Nexus.Guardrails.Tests/           16 unit tests
-    Nexus.Permissions.Tests/          Permissions rules, approval, middleware
-    Nexus.CostTracking.Tests/         Usage extraction and aggregation
-  Nexus.Workflows.Dsl.Tests/        20 unit tests
-  Nexus.Integration.Tests/          9 integration tests + 15 unit tests
-examples/
-  Nexus.Examples.Minimal/           Single agent with tools & guardrails
-  Nexus.Examples.MultiAgent/        Graph orchestration, checkpointing, workflows
-```
+- src: Core runtime, orchestration, checkpointing, memory, messaging, guardrails, permissions, cost tracking, telemetry, auth, protocols, standard tools, workflow DSL, hosting, and testing utilities
+- examples: CLI, minimal setup, and multi-agent examples
+- tests: Unit, integration, live, CLI, orchestration, workflow, and runtime tests
+- benchmarks: Workflow and sub-agent benchmark suite
+- docs: Guides, recipes, API references, architecture, and getting started material
+
+## Test Coverage And Test Count
+
+- 300 tests passed in the latest full solution run
+- Full-solution line coverage: 77.36% (11,118 of 14,372 lines)
+- Full-solution branch coverage: 59.15% (2,464 of 4,166 branches)
+- Focused runtime coverage is strongest on the core paths changed most recently:
+- [src/Nexus.Tools.Standard/AgentTool.cs](src/Nexus.Tools.Standard/AgentTool.cs): 81.5%
+- [src/Nexus.Workflows.Dsl/WorkflowExecution.cs](src/Nexus.Workflows.Dsl/WorkflowExecution.cs): 82.7%
+- [src/Nexus.Orchestration/Defaults/DefaultOrchestrator.cs](src/Nexus.Orchestration/Defaults/DefaultOrchestrator.cs): 76.5%
+- [src/Nexus.Orchestration/Defaults/DefaultTaskGraph.cs](src/Nexus.Orchestration/Defaults/DefaultTaskGraph.cs): 90.4%
+
+## Benchmark Results
+
+- [benchmarks/Nexus.Benchmarks](benchmarks/Nexus.Benchmarks) contains the workflow and sub-agent runtime benchmark suite
+- Latest measured results on the current workstation:
+- CompileWorkflow: 1.961 μs mean, 5.15 KB allocated
+- ExecuteWorkflow: 82.142 μs mean, 39.24 KB allocated
+- RunParallelSubAgents: 3.689 μs mean, 8.2 KB allocated
+- Full benchmark reports are written to BenchmarkDotNet.Artifacts/results
+
+## Credits
+
+- Built on .NET 10 and `Microsoft.Extensions.DependencyInjection`
+- AI abstraction layer powered through `Microsoft.Extensions.AI`
+- Workflow serialization support via `YamlDotNet`
+- Benchmarking via `BenchmarkDotNet`
+- Testing with `xUnit` and `FluentAssertions`
+- CLI presentation powered by `Spectre.Console`
 
 ## License
 

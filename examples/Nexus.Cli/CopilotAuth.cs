@@ -24,6 +24,7 @@ internal static class CopilotAuth
     private static readonly string CopilotTokenPath = Path.Combine(TokenDir, "copilot-token.json");
 
     private static readonly HttpClient Http = CreateHttpClient();
+    private static readonly SemaphoreSlim TokenCacheGate = new(1, 1);
 
     private static HttpClient CreateHttpClient()
     {
@@ -38,23 +39,31 @@ internal static class CopilotAuth
     /// </summary>
     public static async Task<CopilotToken> GetTokenAsync(CancellationToken ct = default)
     {
-        // Try cached copilot token
-        var cached = LoadCopilotToken();
-        if (cached is not null && cached.ExpiresAt > DateTimeOffset.UtcNow.AddMinutes(5))
-            return cached;
-
-        // Need a GitHub OAuth token first
-        var githubToken = LoadGithubToken();
-        if (githubToken is null)
+        await TokenCacheGate.WaitAsync(ct).ConfigureAwait(false);
+        try
         {
-            githubToken = await DeviceFlowAsync(ct).ConfigureAwait(false);
-            SaveGithubToken(githubToken);
-        }
+            // Try cached copilot token
+            var cached = LoadCopilotToken();
+            if (cached is not null && cached.ExpiresAt > DateTimeOffset.UtcNow.AddMinutes(5))
+                return cached;
 
-        // Exchange GitHub token for Copilot API token
-        var copilotToken = await ExchangeForCopilotTokenAsync(githubToken.AccessToken, ct).ConfigureAwait(false);
-        SaveCopilotToken(copilotToken);
-        return copilotToken;
+            // Need a GitHub OAuth token first
+            var githubToken = LoadGithubToken();
+            if (githubToken is null)
+            {
+                githubToken = await DeviceFlowAsync(ct).ConfigureAwait(false);
+                SaveGithubToken(githubToken);
+            }
+
+            // Exchange GitHub token for Copilot API token
+            var copilotToken = await ExchangeForCopilotTokenAsync(githubToken.AccessToken, ct).ConfigureAwait(false);
+            SaveCopilotToken(copilotToken);
+            return copilotToken;
+        }
+        finally
+        {
+            TokenCacheGate.Release();
+        }
     }
 
     /// <summary>Runs the GitHub device flow to get an OAuth access token.</summary>
@@ -176,8 +185,16 @@ internal static class CopilotAuth
     /// <summary>Removes cached tokens (logout).</summary>
     public static void Logout()
     {
-        if (File.Exists(GithubTokenPath)) File.Delete(GithubTokenPath);
-        if (File.Exists(CopilotTokenPath)) File.Delete(CopilotTokenPath);
+        TokenCacheGate.Wait();
+        try
+        {
+            if (File.Exists(GithubTokenPath)) File.Delete(GithubTokenPath);
+            if (File.Exists(CopilotTokenPath)) File.Delete(CopilotTokenPath);
+        }
+        finally
+        {
+            TokenCacheGate.Release();
+        }
     }
 }
 

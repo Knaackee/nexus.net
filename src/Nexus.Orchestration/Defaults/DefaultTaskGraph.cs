@@ -84,14 +84,63 @@ public sealed class DefaultTaskGraph : ITaskGraph
         return false;
     }
 
-    internal IReadOnlyList<ITaskNode> GetReadyNodes(ISet<TaskId> completedIds)
+    internal TaskNodeSchedulingPlan CreateSchedulingPlan(
+        ISet<TaskId> terminalIds,
+        IReadOnlyDictionary<TaskId, AgentResult> completedResults,
+        ISet<TaskId> skippedIds)
     {
-        return _nodes
-            .Where(n => !completedIds.Contains(n.TaskId) &&
-                        n.Dependencies.All(d => completedIds.Contains(d.TaskId)))
-            .ToList<ITaskNode>();
+        var ready = new List<ITaskNode>();
+        var skipped = new List<(ITaskNode Node, string Reason)>();
+
+        foreach (var node in _nodes)
+        {
+            if (terminalIds.Contains(node.TaskId))
+                continue;
+
+            if (node.Dependencies.Count == 0)
+            {
+                ready.Add(node);
+                continue;
+            }
+
+            if (node.Dependencies.Any(d => !terminalIds.Contains(d.TaskId)))
+                continue;
+
+            var taskNode = (DefaultTaskNode)node;
+            var activeIncomingEdges = 0;
+
+            foreach (var dependency in node.Dependencies)
+            {
+                if (skippedIds.Contains(dependency.TaskId))
+                    continue;
+
+                if (taskNode.ConditionMap.TryGetValue(dependency.TaskId, out var condition))
+                {
+                    if (completedResults.TryGetValue(dependency.TaskId, out var dependencyResult) && condition(dependencyResult))
+                        activeIncomingEdges++;
+
+                    continue;
+                }
+
+                activeIncomingEdges++;
+            }
+
+            if (activeIncomingEdges == 0)
+            {
+                skipped.Add((node, "No incoming edge conditions matched."));
+                continue;
+            }
+
+            ready.Add(node);
+        }
+
+        return new TaskNodeSchedulingPlan(ready, skipped);
     }
 }
+
+internal sealed record TaskNodeSchedulingPlan(
+    IReadOnlyList<ITaskNode> ReadyNodes,
+    IReadOnlyList<(ITaskNode Node, string Reason)> SkippedNodes);
 
 internal sealed class DefaultTaskNode(AgentTask task) : ITaskNode
 {
