@@ -16,13 +16,13 @@ This plan focuses on the last major push from a strong engineering repository to
 Each important recipe should exist in three layers:
 
 - documentation in `docs/recipes/{recipe-name}.md` or a migrated folder-based recipe README
-- a minimal runnable sample app in `examples/Recipes/{RecipeName}/`
+- a minimal runnable sample app in `examples/{ExampleName}/`
 - matching unit or focused integration tests in `tests/Recipes.{RecipeName}.Tests/` or the closest existing test project
 
 ### Target Structure
 
 - `recipes/{recipe-name}/README.md`
-- `recipes/{recipe-name}/src/` or `examples/Recipes/{RecipeName}/`
+- `examples/{ExampleName}/`
 - `recipes/{recipe-name}/tests/` or mirrored tests under `tests/`
 
 ### Recommended First Wave

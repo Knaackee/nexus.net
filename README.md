@@ -44,10 +44,12 @@ flowchart TD
 
 - [Quick Start Guide](docs/guides/quick-start.md)
 - [Documentation Index](docs/README.md)
+- [LLM Docs](docs/llms/README.md)
 - [Installation](docs/getting-started/installation.md)
 - [CLI Getting Started](docs/getting-started/cli.md)
 - [Quick Start Entry](docs/getting-started/quickstart.md)
 - [Recipe Index](docs/recipes/README.md)
+- [Examples Index](examples/README.md)
 - [Benchmarks README](benchmarks/README.md)
 
 ## Recipes
@@ -56,13 +58,27 @@ flowchart TD
 - [Chat Session With Memory](docs/recipes/chat-session-with-memory.md)
 - [Human-Approved Workflow](docs/recipes/human-approved-workflow.md)
 - [Parallel Sub-Agents And Workflow Fan-Out](docs/recipes/parallel-subagents-and-workflow-fanout.md)
+- [Checkpointed Recovery Workflow](docs/recipes/checkpointed-recovery-workflow.md)
+- [Tool-Only Worker Agent](docs/recipes/tool-only-worker-agent.md)
+- [Cost-Aware Batch Processing](docs/recipes/cost-aware-batch-processing.md)
 - [Task System + Graph Brain](docs/recipes/task-system-graph-brain.md)
+
+## Runnable Scenario Examples
+
+- [Single Agent With Tools Example](examples/Nexus.Examples.SingleAgentWithTools/README.md)
+- [Chat Session With Memory Example](examples/Nexus.Examples.ChatSessionWithMemory/README.md)
+- [Human-Approved Workflow Example](examples/Nexus.Examples.HumanApprovedWorkflow/README.md)
+- [Parallel Sub-Agents And Workflow Fan-Out Example](examples/Nexus.Examples.ParallelSubAgentsAndWorkflowFanOut/README.md)
 
 ## Guides
 
 - [Quick Start](docs/guides/quick-start.md)
 - [Orchestration](docs/guides/orchestration.md)
 - [Sub-Agents](docs/guides/sub-agents.md)
+- [Performance And Benchmarking](docs/guides/performance-and-benchmarking.md)
+- [Production Hardening](docs/guides/production-hardening.md)
+- [CI And Quality Gates](docs/guides/ci-and-quality-gates.md)
+- [Workflow Patterns And Anti-Patterns](docs/guides/workflow-patterns-and-anti-patterns.md)
 - [External Brain & Task System](docs/guides/external-brain-task-system.md)
 - [Memory](docs/guides/memory.md)
 - [Guardrails](docs/guides/guardrails.md)
@@ -95,30 +111,37 @@ flowchart TD
 - [Nexus.Protocols](docs/api/nexus-protocols.md)
 - [Nexus.Testing](docs/api/nexus-testing.md)
 
+## LLM Docs
+
+- [LLM Docs Index](docs/llms/README.md)
+- [Runtime Map](docs/llms/runtime-map.md)
+- [Agent Loop](docs/llms/agent-loop.md)
+- [Workflows DSL](docs/llms/workflows-dsl.md)
+- [Tools And Sub-Agents](docs/llms/tools-and-subagents.md)
+- [Testing And Benchmarks](docs/llms/testing-and-benchmarks.md)
+- [Glossary](docs/llms/glossary.md)
+
 ## Examples Docs
 
 - [Minimal Agent](docs/examples/minimal.md)
 - [Multi-Agent Graph](docs/examples/multi-agent.md)
 - [Nexus CLI](docs/examples/nexus-cli.md)
+- [Examples Index](examples/README.md)
 
 ## Project Structure
 
 - src: Core runtime, orchestration, checkpointing, memory, messaging, guardrails, permissions, cost tracking, telemetry, auth, protocols, standard tools, workflow DSL, hosting, and testing utilities
-- examples: CLI, minimal setup, and multi-agent examples
+- examples: CLI, minimal setup, multi-agent examples, and runnable recipe apps
 - tests: Unit, integration, live, CLI, orchestration, workflow, and runtime tests
 - benchmarks: Workflow and sub-agent benchmark suite
-- docs: Guides, recipes, API references, architecture, and getting started material
+- docs: Guides, recipes, LLM docs, API references, architecture, and getting started material
 
 ## Test Coverage And Test Count
 
-- 300 tests passed in the latest full solution run
-- Full-solution line coverage: 77.36% (11,118 of 14,372 lines)
-- Full-solution branch coverage: 59.15% (2,464 of 4,166 branches)
-- Focused runtime coverage is strongest on the core paths changed most recently:
-- [src/Nexus.Tools.Standard/AgentTool.cs](src/Nexus.Tools.Standard/AgentTool.cs): 81.5%
-- [src/Nexus.Workflows.Dsl/WorkflowExecution.cs](src/Nexus.Workflows.Dsl/WorkflowExecution.cs): 82.7%
-- [src/Nexus.Orchestration/Defaults/DefaultOrchestrator.cs](src/Nexus.Orchestration/Defaults/DefaultOrchestrator.cs): 76.5%
-- [src/Nexus.Orchestration/Defaults/DefaultTaskGraph.cs](src/Nexus.Orchestration/Defaults/DefaultTaskGraph.cs): 90.4%
+- 265 tests passed in the latest full solution run
+- Full-solution line coverage: 76.29% (11,182 of 14,657 lines)
+- Full-solution branch coverage: 58.28% (2,450 of 4,204 branches)
+- The coverage denominator now includes the new runnable recipe projects added to the solution as source-backed assets
 
 ## Benchmark Results
 

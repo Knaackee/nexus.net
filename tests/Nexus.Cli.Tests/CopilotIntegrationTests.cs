@@ -507,10 +507,15 @@ public sealed class ChatManagerTests : IDisposable
 public sealed class CopilotChatClientModelTests
 {
     [Fact]
-    public void AvailableModels_Contains_Expected_Models()
+    public async Task CopilotProvider_Initializes_Discoverable_Models()
     {
-        CopilotChatClient.AvailableModels.Should().Contain("gpt-4o-mini");
-        CopilotChatClient.AvailableModels.Should().Contain("gpt-4o");
+        using var provider = new CopilotCliChatProvider();
+
+        await provider.InitializeAsync();
+
+        provider.AvailableModels.Should().NotBeEmpty();
+        provider.DefaultModel.Should().NotBeNullOrWhiteSpace();
+        provider.AvailableModels.Should().Contain(provider.DefaultModel);
     }
 
     [Fact]

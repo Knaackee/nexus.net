@@ -2,6 +2,10 @@
 
 Use this when one coordinator should split work immediately, but you still want a deterministic workflow stage after the fan-out.
 
+## Source-Backed Asset
+
+- runnable example: [../../examples/Nexus.Examples.ParallelSubAgentsAndWorkflowFanOut/README.md](../../examples/Nexus.Examples.ParallelSubAgentsAndWorkflowFanOut/README.md)
+
 ## Good Fit
 
 Choose this recipe when:

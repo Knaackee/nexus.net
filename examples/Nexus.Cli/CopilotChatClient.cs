@@ -18,16 +18,6 @@ internal sealed class CopilotChatClient : IChatClient
     private readonly HttpClient _http;
     private CopilotToken? _token;
 
-    /// <summary>Available Copilot models.</summary>
-    public static readonly string[] AvailableModels =
-    [
-        "gpt-4o",
-        "gpt-4o-mini",
-        "claude-3.5-sonnet",
-        "o3-mini",
-        "gemini-2.0-flash-001",
-    ];
-
     public CopilotChatClient(string model)
     {
         _model = model;

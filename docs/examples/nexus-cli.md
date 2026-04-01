@@ -1,19 +1,20 @@
 # Example: Nexus CLI
 
-The `Nexus.Cli` is a fully-featured interactive coding agent powered by GitHub Copilot, built with Spectre.Console on top of `Nexus.Defaults`, `IAgentLoop`, `Nexus.Commands`, and `Nexus.Skills`.
+The `Nexus.Cli` is a fully-featured interactive coding agent built with Spectre.Console on top of `Nexus.Defaults`, `IAgentLoop`, `Nexus.Commands`, and `Nexus.Skills`.
 
 **Location:** `examples/Nexus.Cli/`
 
 ## What It Shows
 
-- Real-world `IChatClient` implementation (GitHub Copilot API)
-- OAuth device flow authentication with token caching
+- Real-world provider-backed `IChatClient` implementations
+- Provider authentication and token caching for hosted providers
 - Server-Sent Events (SSE) streaming parsing
 - Multi-session agent-loop management
 - Rich terminal rendering with Spectre.Console
 - Slash-command dispatch with `Nexus.Commands`
 - Reusable skill profiles with `Nexus.Skills`
 - MCP server loading from project/user `.nexus/mcp.json`
+- Runtime model discovery from the active provider
 
 ## Architecture
 
@@ -33,6 +34,8 @@ Program (Spectre) → CommandDispatcher / SkillCatalog → ChatManager → ChatS
 
 **CopilotChatClient** — Implements `IChatClient` against the GitHub Copilot Chat Completions API with SSE streaming.
 
+**CliChatProviders** — Resolves the active provider, authenticates when required, and discovers the available model IDs at runtime.
+
 **ChatSession** — Owns a `NexusDefaultHost`, resumes the same loop-backed session over time, and forwards streamed loop events to the terminal.
 
 **ChatManager** — Coordinates multiple sessions with create, switch, delete, and per-session skill operations.
@@ -44,6 +47,8 @@ Program (Spectre) → CommandDispatcher / SkillCatalog → ChatManager → ChatS
 **Nexus.Protocols.Mcp** — Connects configured MCP servers and registers discovered tools into the session host before the loop runs.
 
 ## Commands
+
+The CLI command surface is intentionally documented here as the canonical reference for the interactive host.
 
 | Command | Description |
 |---------|-------------|
@@ -70,7 +75,9 @@ cd examples/Nexus.Cli
 dotnet run
 ```
 
-On first run, authenticate via GitHub device flow. The token is cached for subsequent runs.
+On first run with GitHub Copilot, authenticate via GitHub device flow. The token is cached for subsequent runs.
+
+Model selection is provider-driven. `/models` shows the currently discovered runtime list for the active provider, and `/new` without an explicit model uses that provider's current default.
 
 If `.nexus/mcp.json` or `~/.nexus/mcp.json` exists, the CLI also loads configured MCP servers and makes their tools available to the active session.
 

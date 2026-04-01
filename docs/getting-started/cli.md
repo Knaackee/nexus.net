@@ -1,16 +1,8 @@
 # Nexus CLI
 
-The Nexus CLI (`Nexus.Cli`) is an interactive multi-chat coding agent powered by GitHub Copilot. It demonstrates real-world usage of the Nexus framework with `Nexus.Defaults`, `IAgentLoop`, standard tools, slash commands, and reusable skills.
+The Nexus CLI (`Nexus.Cli`) is the interactive Nexus host for real multi-chat sessions, slash commands, reusable skills, and MCP-backed tools.
 
-## Features
-
-- **GitHub Copilot Authentication** — OAuth device flow with automatic token caching
-- **Multi-Chat Support** — Create, switch, rename, and delete chat sessions
-- **Streaming Responses** — Real-time token-by-token output through `AgentLoop` events
-- **Rich Terminal UI** — Built with Spectre.Console for formatted markdown and status indicators
-- **Slash Commands** — Powered by `Nexus.Commands`
-- **Skill Profiles** — Powered by `Nexus.Skills`
-- **MCP Tools** — Optional MCP server loading from project/user `.nexus/mcp.json`
+Use this page as the shortest entry path. The full CLI architecture and reference live in [../examples/nexus-cli.md](../examples/nexus-cli.md).
 
 ## Running
 
@@ -19,7 +11,7 @@ cd examples/Nexus.Cli
 dotnet run
 ```
 
-On first run, you'll be prompted to authenticate with GitHub:
+On first run with GitHub Copilot, you'll be prompted to authenticate with GitHub:
 
 ```
 → Open https://github.com/login/device
@@ -28,25 +20,20 @@ Waiting for authorization...
 ✓ Authenticated as your-username
 ```
 
-## Commands
+If you switch the provider via environment configuration, the CLI discovers the available models from that provider at runtime instead of using a baked-in model list.
 
-| Command | Description |
-|---------|-------------|
-| `/new <key> [model] [skill]` | Create a new chat session |
-| `/list` | List all chat sessions |
-| `/switch <id>` | Switch to a different session |
-| `/remove <id>` | Delete a chat session |
-| `/skill [name]` | List skills or switch the active session skill |
-| `/models` | Show available models |
-| `/model [name]` | Show or switch the active model |
-| `/resume [key]` | Resume the latest persisted session |
-| `/cost` | Show token and cost information |
-| `/status` | Show session status and output previews |
-| `/clear` | Clear the active session conversation |
-| `/compact` | Compact the active session history |
-| `/cancel` | Cancel the active request |
-| `/help` | Show available commands |
-| `/quit` | Exit the CLI |
+## Core Flow
+
+- Run `/models` to inspect the active provider's discovered model list.
+- Run `/new <key> [model] [skill]` to create a chat.
+- Send a normal message to the active chat.
+- Use `/status`, `/cost`, `/list`, and `/resume` to inspect or continue work.
+
+## Where To Go Next
+
+- Full CLI reference and architecture: [../examples/nexus-cli.md](../examples/nexus-cli.md)
+- Runnable examples index: [../../examples/README.md](../../examples/README.md)
+- Framework quick start: [quickstart.md](quickstart.md)
 
 ## Architecture
 

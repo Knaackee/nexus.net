@@ -2,6 +2,10 @@
 
 Use this when you want the smallest useful Nexus setup: one agent, a few tools, and no extra workflow machinery.
 
+## Source-Backed Asset
+
+- runnable example: [../../examples/Nexus.Examples.SingleAgentWithTools/README.md](../../examples/Nexus.Examples.SingleAgentWithTools/README.md)
+
 ## Good Fit
 
 This recipe is a good fit if:

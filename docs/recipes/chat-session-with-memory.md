@@ -2,6 +2,10 @@
 
 Use this when your application is not just a one-shot task runner, but an ongoing session that needs continuity.
 
+## Source-Backed Asset
+
+- runnable example: [../../examples/Nexus.Examples.ChatSessionWithMemory/README.md](../../examples/Nexus.Examples.ChatSessionWithMemory/README.md)
+
 ## Good Fit
 
 This recipe is a good fit if:

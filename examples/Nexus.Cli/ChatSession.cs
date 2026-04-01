@@ -23,6 +23,7 @@ internal sealed class ChatSession : IDisposable
     private const string BaseSystemPrompt = "You are Nexus CLI, an interactive coding agent. Be concise, grounded in the current workspace, and use tools only when they improve the answer.";
 
     private readonly global::Nexus.Defaults.NexusDefaultHost _host;
+    private readonly Func<string, IChatClient> _chatClientFactory;
     private readonly StringBuilder _lastResponse = new();
     private CancellationTokenSource? _cts;
     private SessionId? _sessionId;
@@ -56,7 +57,8 @@ internal sealed class ChatSession : IDisposable
         string? sessionStoreDirectory = null,
         SessionId? sessionId = null,
         int messageCount = 0,
-        IReadOnlyList<McpServerConfig>? _mcpServers = null)
+        IReadOnlyList<McpServerConfig>? _mcpServers = null,
+        Func<string, IChatClient>? chatClientFactory = null)
     {
         Key = key;
         Model = model;
@@ -64,8 +66,9 @@ internal sealed class ChatSession : IDisposable
         _projectRoot = projectRoot;
         _sessionId = sessionId;
         _messageCount = messageCount;
+        _chatClientFactory = chatClientFactory ?? (resolvedModel => new CopilotChatClient(resolvedModel));
         this._mcpServers = _mcpServers ?? [];
-        _host = global::Nexus.Nexus.CreateDefault(_ => new CopilotChatClient(model), options =>
+        _host = global::Nexus.Nexus.CreateDefault(_ => _chatClientFactory(model), options =>
         {
             options.SessionTitle = key;
             options.DefaultAgentDefinition = new AgentDefinition

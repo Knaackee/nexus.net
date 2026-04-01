@@ -119,4 +119,42 @@ public sealed class FileSessionStoreTests : IDisposable
         updated.Should().NotBeNull();
         updated!.MessageCount.Should().Be(2);
     }
+
+    [Fact]
+    public async Task DeleteAsync_ReturnsFalse_For_Missing_Session()
+    {
+        var store = new FileSessionStore(_baseDirectory);
+
+        var deleted = await store.DeleteAsync(SessionId.New());
+
+        deleted.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task ListAsync_Can_Filter_By_Metadata()
+    {
+        var store = new FileSessionStore(_baseDirectory);
+        await store.CreateAsync(new SessionCreateOptions
+        {
+            Title = "demo",
+            Metadata = new Dictionary<string, string> { ["project"] = "nexus" },
+        });
+
+        var sessions = new List<SessionInfo>();
+        await foreach (var session in store.ListAsync(new SessionFilter { SearchText = "nexus" }))
+            sessions.Add(session);
+
+        sessions.Should().ContainSingle();
+        sessions[0].Metadata["project"].Should().Be("nexus");
+    }
+
+    [Fact]
+    public async Task ReplaceAsync_Throws_For_Missing_Session()
+    {
+        var store = new FileSessionStore(_baseDirectory);
+
+        var act = () => store.ReplaceAsync(SessionId.New(), [new ChatMessage(ChatRole.User, "hello")]);
+
+        await act.Should().ThrowAsync<KeyNotFoundException>();
+    }
 }

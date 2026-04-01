@@ -20,6 +20,10 @@ Complete documentation for the Nexus Multi-Agent Orchestration Engine.
 - [Quick Start](guides/quick-start.md) — The fastest runnable setup from DI to first task
 - [Orchestration](guides/orchestration.md) — Graph, sequence, parallel, and hierarchical execution
 - [Sub-Agents](guides/sub-agents.md) — Single and batched child-agent delegation
+- [Performance And Benchmarking](guides/performance-and-benchmarking.md) — What to measure, how to reason about hot paths, and where benchmark evidence lives
+- [Production Hardening](guides/production-hardening.md) — Runtime controls, failure policies, and deployment guidance
+- [CI And Quality Gates](guides/ci-and-quality-gates.md) — Practical verification gates for tests, coverage, docs, and benchmarks
+- [Workflow Patterns And Anti-Patterns](guides/workflow-patterns-and-anti-patterns.md) — Structural heuristics for reliable staged execution
 - [External Brain & Task System](guides/external-brain-task-system.md) — Using Nexus with a task backend and a graph-database brain such as Ladybug
 - [Memory & Context](guides/memory.md) — Conversation history, working memory, context windows
 - [Guardrails](guides/guardrails.md) — PII redaction, prompt injection detection, content safety
@@ -36,13 +40,27 @@ Complete documentation for the Nexus Multi-Agent Orchestration Engine.
 
 ### Recipes
 
-- [Recipe Index](recipes/README.md) — Choose the right Nexus setup by use case
+- [Recipe Index](recipes/README.md) — Thin scenario selector that routes to the right guide or runnable example
+- [Examples Index](../examples/README.md) — Runnable step-by-step scenario examples with source and test links
 - [Existing Provider UI](recipes/existing-provider-ui.md) — Keep your own provider/model picker UI and hand the runtime choices to Nexus
 - [Single Agent With Tools](recipes/single-agent-with-tools.md) — Smallest useful setup for one tool-using assistant
 - [Chat Session With Memory](recipes/chat-session-with-memory.md) — Session-aware loop with compaction and recall
 - [Human-Approved Workflow](recipes/human-approved-workflow.md) — Research, plan, execute, review with approval gates
 - [Parallel Sub-Agents And Workflow Fan-Out](recipes/parallel-subagents-and-workflow-fanout.md) — Fast specialist fan-out followed by deterministic merge stages
 - [Task System + Graph Brain](recipes/task-system-graph-brain.md) — Nexus over an external task backend and Ladybug-style graph memory
+- [Checkpointed Recovery Workflow](recipes/checkpointed-recovery-workflow.md) — Resume a graph instead of rerunning expensive completed stages
+- [Tool-Only Worker Agent](recipes/tool-only-worker-agent.md) — Constrained worker focused on a minimal tool surface
+- [Cost-Aware Batch Processing](recipes/cost-aware-batch-processing.md) — Bounded execution under explicit token and cost budgets
+
+### LLM Docs
+
+- [LLM Docs Index](llms/README.md) — Concise runtime map for retrieval and prompting
+- [Runtime Map](llms/runtime-map.md) — Package-to-responsibility map
+- [Agent Loop](llms/agent-loop.md) — Multi-turn execution surface
+- [Workflows DSL](llms/workflows-dsl.md) — Serializable workflow model and execution bridge
+- [Tools And Sub-Agents](llms/tools-and-subagents.md) — Tool system and delegated child-agent model
+- [Testing And Benchmarks](llms/testing-and-benchmarks.md) — Evidence surfaces and test helpers
+- [Glossary](llms/glossary.md) — Stable runtime terminology
 
 ### API Reference
 
@@ -59,6 +77,7 @@ Complete documentation for the Nexus Multi-Agent Orchestration Engine.
 
 ### Examples
 
+- [Examples Index](../examples/README.md) — Canonical home for runnable scenario examples
 - [Minimal Agent](examples/minimal.md) — Single agent with tools and guardrails
 - [Multi-Agent Graph](examples/multi-agent.md) — Graph orchestration with checkpointing
 - [Nexus CLI](examples/nexus-cli.md) — GitHub Copilot multi-chat agent

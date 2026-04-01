@@ -2,6 +2,10 @@
 
 Use this when work should move through explicit stages and either tools or whole steps need approval.
 
+## Source-Backed Asset
+
+- runnable example: [../../examples/Nexus.Examples.HumanApprovedWorkflow/README.md](../../examples/Nexus.Examples.HumanApprovedWorkflow/README.md)
+
 ## Good Fit
 
 This recipe is a good fit if:

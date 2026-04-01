@@ -1,8 +1,10 @@
 # Nexus Recipes
 
-Recipes are short, scenario-first guides.
+Recipes are short scenario selectors, not a second home for the runnable examples.
 
-Use them when you already know the shape of the system you want to build and want the smallest correct Nexus setup for it.
+The runnable step-by-step implementations for the main scenarios live under [../../examples/README.md](../../examples/README.md).
+
+Use this section when you know the problem shape but want help choosing the smallest correct Nexus setup before you dive into the full example or guide.
 
 ## How To Use This Section
 
@@ -13,7 +15,7 @@ Each recipe answers four questions quickly:
 3. What should remain outside Nexus?
 4. What is the smallest viable wiring?
 
-If you need API detail after choosing a recipe, jump from the recipe into the matching guide.
+If you need runnable code, jump to the matching example. If you need API detail, jump to the matching guide.
 
 ## Choose A Recipe
 
@@ -66,6 +68,36 @@ Choose this when:
 - one coordinator should delegate specialist work immediately
 - the next stage should still be modeled as an explicit workflow
 - you want separate concurrency limits for local delegation and graph execution
+
+### I need recovery instead of rerunning a long workflow
+
+Use [Checkpointed Recovery Workflow](checkpointed-recovery-workflow.md).
+
+Choose this when:
+
+- partial graph completion should be preserved
+- restart-from-zero is too expensive
+- you need checkpoint and resume semantics
+
+### I want a narrow worker with a tiny tool surface
+
+Use [Tool-Only Worker Agent](tool-only-worker-agent.md).
+
+Choose this when:
+
+- a specialized worker should stay constrained
+- the main runtime value is tool execution
+- routing and session continuity are unnecessary
+
+### I need to process a batch under a cost ceiling
+
+Use [Cost-Aware Batch Processing](cost-aware-batch-processing.md).
+
+Choose this when:
+
+- batch size matters financially
+- agents or workflows need explicit budget limits
+- you want estimated-cost visibility during or after execution
 
 ### I already have a task system and a graph brain
 

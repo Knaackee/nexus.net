@@ -13,9 +13,12 @@ internal sealed class ChatManager : IDisposable
     private readonly ConcurrentDictionary<string, ChatSession> _sessions = new(StringComparer.OrdinalIgnoreCase);
     private readonly ISkillCatalog _skills;
     private readonly string _defaultSkillName;
+    private readonly string _defaultModel;
+    private readonly Func<string>? _defaultModelProvider;
     private readonly string? _projectRoot;
     private readonly string? _sessionStorePath;
     private readonly IReadOnlyList<McpServerConfig> _mcpServers;
+    private readonly Func<string, Microsoft.Extensions.AI.IChatClient> _chatClientFactory;
     private string? _activeKey;
 
     public ChatManager(
@@ -23,13 +26,19 @@ internal sealed class ChatManager : IDisposable
         string defaultSkillName = CliSkillCatalog.DefaultSkillName,
         string? projectRoot = null,
         string? sessionStorePath = null,
-        IReadOnlyList<McpServerConfig>? mcpServers = null)
+        IReadOnlyList<McpServerConfig>? mcpServers = null,
+        Func<string, Microsoft.Extensions.AI.IChatClient>? chatClientFactory = null,
+        string? defaultModel = null,
+        Func<string>? defaultModelProvider = null)
     {
         _skills = skills ?? CliSkillCatalog.CreateDefaultCatalog();
         _defaultSkillName = defaultSkillName;
+        _defaultModel = string.IsNullOrWhiteSpace(defaultModel) ? string.Empty : defaultModel;
+        _defaultModelProvider = defaultModelProvider;
         _projectRoot = projectRoot;
         _sessionStorePath = sessionStorePath;
         _mcpServers = mcpServers ?? [];
+        _chatClientFactory = chatClientFactory ?? (model => new CopilotChatClient(model));
     }
 
     public string? ActiveKey => _activeKey;
@@ -38,7 +47,7 @@ internal sealed class ChatManager : IDisposable
 
     public ChatSession Add(string key, string model, SkillDefinition? skill = null)
     {
-        var session = new ChatSession(key, model, skill ?? ResolveDefaultSkill(), _projectRoot, _sessionStorePath, _mcpServers: _mcpServers);
+        var session = new ChatSession(key, model, skill ?? ResolveDefaultSkill(), _projectRoot, _sessionStorePath, _mcpServers: _mcpServers, chatClientFactory: _chatClientFactory);
 
         if (!_sessions.TryAdd(key, session))
         {
@@ -70,7 +79,7 @@ internal sealed class ChatManager : IDisposable
         if (existing.State == ChatSessionState.Running)
             throw new InvalidOperationException("Cannot replace a running chat session.");
 
-        var replacement = new ChatSession(key, model, skill ?? existing.Skill, _projectRoot, _sessionStorePath, _mcpServers: _mcpServers);
+        var replacement = new ChatSession(key, model, skill ?? existing.Skill, _projectRoot, _sessionStorePath, _mcpServers: _mcpServers, chatClientFactory: _chatClientFactory);
         _sessions[key] = replacement;
         existing.Dispose();
 
@@ -133,7 +142,7 @@ internal sealed class ChatManager : IDisposable
 
         var model = selected.Metadata.TryGetValue("model", out var storedModel) && !string.IsNullOrWhiteSpace(storedModel)
             ? storedModel
-            : CopilotChatClient.AvailableModels[0];
+            : ResolveDefaultModel();
         var skill = selected.Metadata.TryGetValue("skill", out var storedSkill)
             ? _skills.Resolve(storedSkill)
             : null;
@@ -146,7 +155,8 @@ internal sealed class ChatManager : IDisposable
             _sessionStorePath,
             selected.Id,
             selected.MessageCount,
-            _mcpServers);
+            _mcpServers,
+            _chatClientFactory);
 
         if (!_sessions.TryAdd(key, resumed))
         {
@@ -170,6 +180,9 @@ internal sealed class ChatManager : IDisposable
 
         return new SkillDefinition { Name = "default" };
     }
+
+    private string ResolveDefaultModel()
+        => _defaultModelProvider?.Invoke() ?? _defaultModel;
 
     private string BuildKey(string? preferredKey, SessionInfo session)
     {

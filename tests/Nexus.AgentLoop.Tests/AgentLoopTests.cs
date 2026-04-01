@@ -1,6 +1,7 @@
 using FluentAssertions;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
+using System.Text.Json;
 using Nexus.Compaction;
 using Nexus.Core.Agents;
 using Nexus.Core.Contracts;
@@ -277,6 +278,83 @@ public sealed class AgentLoopTests
     }
 
     [Fact]
+    public async Task RunAsync_WithWorkflowRoutingStrategy_Uses_Modified_Approval_Output_For_Next_Node()
+    {
+        var client = new FakeChatClient("research output", "plan output", "execution output");
+        var gate = new ModifiedApprovalGate("approved plan with rollback");
+        using var services = BuildServices(client, gate);
+        var loop = services.GetRequiredService<IAgentLoop>();
+
+        var workflow = new WorkflowDefinition
+        {
+            Id = "wf-3",
+            Name = "Modified approval workflow",
+            Nodes =
+            [
+                new NodeDefinition
+                {
+                    Id = "research",
+                    Name = "Research",
+                    Description = "Research: {input}",
+                },
+                new NodeDefinition
+                {
+                    Id = "plan",
+                    Name = "Plan",
+                    Description = "Plan: {previous}",
+                    RequiresApproval = true,
+                },
+                new NodeDefinition
+                {
+                    Id = "execute",
+                    Name = "Execute",
+                    Description = "Execute: {previous}",
+                },
+            ],
+            Edges =
+            [
+                new EdgeDefinition { From = "research", To = "plan" },
+                new EdgeDefinition { From = "plan", To = "execute" },
+            ],
+        };
+
+        await DrainAsync(loop.RunAsync(new AgentLoopOptions
+        {
+            RoutingStrategy = new WorkflowRoutingStrategy(workflow),
+            UserInput = "Prepare deployment",
+        }));
+
+        client.ReceivedMessages.Should().HaveCount(3);
+        client.ReceivedMessages[2].Select(m => m.Text).Should().Contain(text => text != null && text.Contains("approved plan with rollback", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task RunAsync_WithWorkflowRoutingStrategy_StopsImmediately_For_Empty_Workflow()
+    {
+        var client = new FakeChatClient("unused");
+        using var services = BuildServices(client);
+        var loop = services.GetRequiredService<IAgentLoop>();
+
+        var events = new List<AgentLoopEvent>();
+        await foreach (var evt in loop.RunAsync(new AgentLoopOptions
+        {
+            RoutingStrategy = new WorkflowRoutingStrategy(new WorkflowDefinition
+            {
+                Id = "wf-empty",
+                Name = "Empty",
+                Nodes = [],
+            }),
+            UserInput = "Do nothing",
+        }))
+        {
+            events.Add(evt);
+        }
+
+        events.OfType<LoopCompletedEvent>().Single().Reason.Should().Be(LoopStopReason.AgentCompleted);
+        client.ReceivedMessages.Should().BeEmpty();
+    }
+
+    [Fact]
     public async Task RunAsync_Applies_Relevant_Skills_Through_AgentMiddleware()
     {
         var client = new FakeChatClient("skill-aware answer");
@@ -358,6 +436,22 @@ public sealed class AgentLoopTests
             ];
 
             return Task.FromResult(messages);
+        }
+    }
+
+    private sealed class ModifiedApprovalGate : IApprovalGate
+    {
+        private readonly string _output;
+
+        public ModifiedApprovalGate(string output)
+        {
+            _output = output;
+        }
+
+        public Task<ApprovalResult> RequestApprovalAsync(ApprovalRequest request, TimeSpan? timeout = null, CancellationToken ct = default)
+        {
+            var modified = JsonSerializer.SerializeToElement(new { Output = _output });
+            return Task.FromResult(new ApprovalResult(true, "test-approver", ModifiedContext: modified));
         }
     }
 }

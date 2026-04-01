@@ -103,4 +103,4 @@ Console.WriteLine($"Estimated USD: ${costs.TotalCost:F6}");
 - Need workflow graphs: [Workflows DSL](workflows-dsl.md)
 - Need child delegation: [Sub-Agents](sub-agents.md)
 - Need approvals: [Permissions](permissions.md)
-- Need scenario-first setups: [Recipe Index](../recipes/README.md)
+- Need runnable scenario setups: [Examples Index](../../examples/README.md)
