@@ -43,6 +43,8 @@
 | `Nexus.Memory` | Conversation store, working memory, context window management |
 | `Nexus.Messaging` | In-memory message bus, pub/sub, shared state, dead letter queue |
 | `Nexus.Guardrails` | Prompt injection detection, PII redaction, secrets detection, input limits |
+| `Nexus.Permissions` | Rule-based tool approval, interactive prompts, permission middleware |
+| `Nexus.CostTracking` | Provider-agnostic token and USD cost aggregation around `IChatClient` |
 | `Nexus.Telemetry` | OpenTelemetry traces & metrics for agents and tools |
 | `Nexus.Auth.OAuth2` | API key authentication, OAuth2 client credentials, token cache |
 | `Nexus.Protocols.Mcp` | Model Context Protocol tool adapter and host management |
@@ -57,11 +59,13 @@
 ```csharp
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
+using Nexus.CostTracking;
 using Nexus.Core.Agents;
 using Nexus.Core.Configuration;
 using Nexus.Core.Tools;
 using Nexus.Memory;
 using Nexus.Orchestration;
+using Nexus.Permissions;
 
 var services = new ServiceCollection();
 
@@ -69,6 +73,10 @@ services.AddNexus(nexus =>
 {
     nexus.UseChatClient(_ => myLlmClient);       // Plug in any IChatClient
     nexus.AddOrchestration(o => o.UseDefaults());
+    nexus.AddPermissions(p => p
+        .UsePreset(PermissionPreset.Interactive)
+        .UseConsolePrompt());
+    nexus.AddCostTracking(c => c.AddModel("gpt-4o", input: 2.50m, output: 10.00m));
     nexus.AddMemory(m => m.UseInMemory());
 });
 
@@ -77,7 +85,10 @@ var sp = services.BuildServiceProvider();
 // Register tools
 var tools = sp.GetRequiredService<IToolRegistry>();
 tools.Register(new LambdaTool("get_time", "Current UTC time",
-    (_, _, _) => Task.FromResult(ToolResult.Success(DateTime.UtcNow.ToString("O")))));
+    (_, _, _) => Task.FromResult(ToolResult.Success(DateTime.UtcNow.ToString("O"))))
+{
+    Annotations = new ToolAnnotations { IsReadOnly = true, IsIdempotent = true }
+});
 
 // Spawn an agent and execute
 var pool = sp.GetRequiredService<IAgentPool>();
@@ -85,15 +96,25 @@ var agent = await pool.SpawnAsync(new AgentDefinition
 {
     Name = "Assistant",
     SystemPrompt = "You are a helpful assistant.",
+    Budget = new AgentBudget { MaxCostUsd = 1.00m },
 });
 
 var orchestrator = sp.GetRequiredService<IOrchestrator>();
 var result = await orchestrator.ExecuteSequenceAsync([
-    new AgentTask { Id = TaskId.New(), Description = "Hello!", AssignedAgent = agent.Id }
+    AgentTask.Create("Hello!") with { AssignedAgent = agent.Id }
 ]);
 
-Console.WriteLine(result.TaskResults.Values.First().Text);
+var taskResult = result.TaskResults.Values.First();
+Console.WriteLine(taskResult.Text);
+Console.WriteLine(taskResult.EstimatedCost);
+Console.WriteLine(taskResult.TokenUsage?.TotalTokens);
+
+var tracker = sp.GetRequiredService<ICostTracker>();
+var costs = await tracker.GetSnapshotAsync();
+Console.WriteLine($"Estimated USD: ${costs.TotalCost:F6}");
 ```
+
+When the provider returns usage metadata, `UseDefaults()` now propagates token usage and estimated cost into `AgentResult`, and `MaxCostUsd` is enforced through the default budget middleware.
 
 ## Multi-Agent Graph
 
@@ -167,8 +188,8 @@ Full documentation is in the [`docs/`](docs/README.md) directory:
 
 - **Getting Started** — [Installation](docs/getting-started/installation.md) · [Quick Start](docs/getting-started/quickstart.md) · [CLI](docs/getting-started/cli.md)
 - **Architecture** — [Overview](docs/architecture/overview.md) · [Core Engine](docs/architecture/core-engine.md)
-- **Guides** — [Orchestration](docs/guides/orchestration.md) · [Memory](docs/guides/memory.md) · [Guardrails](docs/guides/guardrails.md) · [Messaging](docs/guides/messaging.md) · [Checkpointing](docs/guides/checkpointing.md) · [Workflows DSL](docs/guides/workflows-dsl.md) · [Protocols](docs/guides/protocols.md) · [Telemetry](docs/guides/telemetry.md) · [Auth](docs/guides/auth.md) · [Testing](docs/guides/testing.md) · [Middleware](docs/guides/middleware.md)
-- **API Reference** — [Core](docs/api/nexus-core.md) · [Orchestration](docs/api/nexus-orchestration.md) · [Memory](docs/api/nexus-memory.md) · [Guardrails](docs/api/nexus-guardrails.md) · [Messaging](docs/api/nexus-messaging.md) · [Workflows DSL](docs/api/nexus-workflows-dsl.md) · [Protocols](docs/api/nexus-protocols.md) · [Testing](docs/api/nexus-testing.md)
+- **Guides** — [Orchestration](docs/guides/orchestration.md) · [Memory](docs/guides/memory.md) · [Guardrails](docs/guides/guardrails.md) · [Permissions](docs/guides/permissions.md) · [Cost Tracking](docs/guides/cost-tracking.md) · [Messaging](docs/guides/messaging.md) · [Checkpointing](docs/guides/checkpointing.md) · [Workflows DSL](docs/guides/workflows-dsl.md) · [Protocols](docs/guides/protocols.md) · [Telemetry](docs/guides/telemetry.md) · [Auth](docs/guides/auth.md) · [Testing](docs/guides/testing.md) · [Middleware](docs/guides/middleware.md)
+- **API Reference** — [Core](docs/api/nexus-core.md) · [Orchestration](docs/api/nexus-orchestration.md) · [Memory](docs/api/nexus-memory.md) · [Guardrails](docs/api/nexus-guardrails.md) · [Permissions](docs/api/nexus-permissions.md) · [Cost Tracking](docs/api/nexus-cost-tracking.md) · [Messaging](docs/api/nexus-messaging.md) · [Workflows DSL](docs/api/nexus-workflows-dsl.md) · [Protocols](docs/api/nexus-protocols.md) · [Testing](docs/api/nexus-testing.md)
 
 ## Building & Testing
 
@@ -187,6 +208,8 @@ src/
   Nexus.Memory/                     Conversation & working memory
   Nexus.Messaging/                  Message bus & shared state
   Nexus.Guardrails/                 Input/output guardrails
+    Nexus.Permissions/                Rule-based tool permissions
+    Nexus.CostTracking/               Token and cost aggregation
   Nexus.Telemetry/                  OpenTelemetry integration
   Nexus.Auth.OAuth2/                Authentication & token management
   Nexus.Protocols.Mcp/              MCP tool adapter
@@ -201,6 +224,8 @@ tests/
   Nexus.Memory.Tests/               12 unit tests
   Nexus.Messaging.Tests/            11 unit tests
   Nexus.Guardrails.Tests/           16 unit tests
+    Nexus.Permissions.Tests/          Permissions rules, approval, middleware
+    Nexus.CostTracking.Tests/         Usage extraction and aggregation
   Nexus.Workflows.Dsl.Tests/        20 unit tests
   Nexus.Integration.Tests/          9 integration tests + 15 unit tests
 examples/

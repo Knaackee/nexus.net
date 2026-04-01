@@ -12,7 +12,7 @@ public sealed class MockTool : ITool
 
     public string Name { get; }
     public string Description { get; }
-    public ToolAnnotations? Annotations => null;
+    public ToolAnnotations? Annotations { get; private set; }
     public List<JsonElement> ReceivedInputs { get; } = [];
 
     private MockTool(string name, string description, Func<JsonElement, ToolResult> handler)
@@ -37,6 +37,12 @@ public sealed class MockTool : ITool
     public static MockTool WithHandler(string name, Func<JsonElement, ToolResult> handler, string? description = null)
     {
         return new MockTool(name, description ?? $"Mock {name}", handler);
+    }
+
+    public MockTool WithAnnotations(ToolAnnotations annotations)
+    {
+        Annotations = annotations;
+        return this;
     }
 
     public Task<ToolResult> ExecuteAsync(JsonElement input, IToolContext context, CancellationToken ct = default)

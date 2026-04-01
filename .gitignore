@@ -18,6 +18,8 @@ project.fragment.lock.json
 *.sln.docstates
 .vs/
 
+temp/
+
 # Rider / JetBrains
 .idea/
 *.sln.iml

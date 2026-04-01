@@ -2,6 +2,8 @@
 
 Define agent orchestration pipelines declaratively in JSON or YAML.
 
+If you use `budget.maxCostUsd`, register `AddCostTracking(...)` as well. Runtime cost enforcement depends on provider usage metadata flowing through the cost-tracking wrapper.
+
 ## WorkflowDefinition
 
 The root model for a workflow:
@@ -213,7 +215,44 @@ Route execution based on agent results:
 
 The `IConditionEvaluator` supports:
 - `result.status == 'Success'` / `'Failed'`
+- `result.status == 'BudgetExceeded'`
 - `result.text.contains('keyword')`
+
+This makes it possible to branch explicitly when a node exhausts its cost budget:
+
+```json
+{
+    "edges": [
+        {
+            "from": "research",
+            "to": "fallback-research",
+            "condition": "result.status == 'BudgetExceeded'"
+        },
+        {
+            "from": "research",
+            "to": "write",
+            "condition": "result.status == 'Success'"
+        }
+    ]
+}
+```
+
+For this to work in runtime execution, combine workflow budgets with `AddCostTracking(...)` so the default budget tracker receives token and cost updates from the chat client.
+
+## Budget-Aware Execution
+
+Workflow budgets are declarative in the DSL, but runtime enforcement still depends on provider usage metadata.
+
+```csharp
+services.AddNexus(nexus =>
+{
+    nexus.UseChatClient(_ => myChatClient);
+    nexus.AddCostTracking(c => c.AddModel("gpt-4o", input: 2.50m, output: 10.00m));
+    nexus.AddOrchestration(o => o.UseDefaults());
+});
+```
+
+When a node exceeds `maxCostUsd`, the completed node result surfaces `AgentResultStatus.BudgetExceeded` and preserves the last known `TokenUsage` and `EstimatedCost`.
 
 ## Node Configuration
 

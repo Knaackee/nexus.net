@@ -19,6 +19,7 @@ public record NodeDefinition
     public required string Id { get; init; }
     public required string Name { get; init; }
     public required string Description { get; init; }
+    public bool RequiresApproval { get; init; }
     public AgentConfig Agent { get; init; } = new();
     public ErrorPolicyConfig? ErrorPolicy { get; init; }
     public NodePosition? Position { get; init; }

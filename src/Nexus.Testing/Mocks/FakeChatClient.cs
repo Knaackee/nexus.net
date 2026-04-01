@@ -39,6 +39,20 @@ public sealed class FakeChatClient : IChatClient
         return this;
     }
 
+    public FakeChatClient WithFunctionCallResponse(params FunctionCallContent[] functionCalls)
+    {
+        var update = new ChatResponseUpdate
+        {
+            Role = ChatRole.Assistant,
+            Contents = functionCalls.Cast<AIContent>().ToList()
+        };
+        _streamingResponses.Enqueue([update]);
+
+        var message = new ChatMessage(ChatRole.Assistant, functionCalls.Cast<AIContent>().ToList());
+        _responses.Enqueue(new ChatResponse(message));
+        return this;
+    }
+
     public Task<ChatResponse> GetResponseAsync(
         IEnumerable<ChatMessage> messages,
         ChatOptions? options = null,

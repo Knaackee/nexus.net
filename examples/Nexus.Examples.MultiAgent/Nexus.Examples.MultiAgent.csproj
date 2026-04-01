@@ -9,6 +9,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Nexus.Core\Nexus.Core.csproj" />
+    <ProjectReference Include="..\..\src\Nexus.CostTracking\Nexus.CostTracking.csproj" />
     <ProjectReference Include="..\..\src\Nexus.Orchestration\Nexus.Orchestration.csproj" />
     <ProjectReference Include="..\..\src\Nexus.Orchestration.Checkpointing\Nexus.Orchestration.Checkpointing.csproj" />
     <ProjectReference Include="..\..\src\Nexus.Memory\Nexus.Memory.csproj" />

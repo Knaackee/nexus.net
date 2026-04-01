@@ -12,6 +12,8 @@
     <ProjectReference Include="..\..\src\Nexus.Orchestration\Nexus.Orchestration.csproj" />
     <ProjectReference Include="..\..\src\Nexus.Memory\Nexus.Memory.csproj" />
     <ProjectReference Include="..\..\src\Nexus.Guardrails\Nexus.Guardrails.csproj" />
+    <ProjectReference Include="..\..\src\Nexus.Permissions\Nexus.Permissions.csproj" />
+    <ProjectReference Include="..\..\src\Nexus.CostTracking\Nexus.CostTracking.csproj" />
   </ItemGroup>
 
   <ItemGroup>

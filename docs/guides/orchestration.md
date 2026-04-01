@@ -186,6 +186,30 @@ await pool.ResumeAsync(agent1.Id);
 await pool.DrainAsync(TimeSpan.FromSeconds(30));
 ```
 
+When a task uses `AssignedAgent`, the default orchestrator reuses that exact agent instance instead of spawning an anonymous replacement. If cost tracking is enabled and the provider returns usage metadata, completed node results also include `AgentResult.TokenUsage`, `AgentResult.EstimatedCost`, and `AgentResultStatus.BudgetExceeded` when a configured budget is crossed.
+
+## Tool Execution Inside ChatAgent
+
+When you use `AddOrchestration(o => o.UseDefaults())`, Nexus also registers a default `IToolExecutor`.
+
+Its behavior is:
+
+- contiguous read-only tool calls are executed in parallel
+- mutating tools are executed serially
+- registered tool middleware is applied during execution
+- permission prompts continue to flow through `ChatAgent` and `IApprovalGate`, so approval events and agent state transitions are preserved
+
+You can tune read-only concurrency:
+
+```csharp
+services.AddNexus(nexus =>
+{
+    nexus.AddOrchestration(o => o
+        .UseDefaults()
+        .ConfigureToolExecutor(options => options.MaxReadOnlyConcurrency = 8));
+});
+```
+
 ## Task Graphs
 
 ```csharp

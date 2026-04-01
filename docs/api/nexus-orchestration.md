@@ -51,6 +51,41 @@ public interface IAgentPool
 }
 ```
 
+### IToolExecutor
+
+```csharp
+public interface IToolExecutor
+{
+    Task<IReadOnlyList<ToolExecutionResult>> ExecuteAsync(
+        IReadOnlyList<ToolExecutionRequest> requests,
+        IToolContext context,
+        CancellationToken ct = default);
+}
+```
+
+### ToolExecutionRequest
+
+```csharp
+public sealed record ToolExecutionRequest(string CallId, ITool Tool, JsonElement Input);
+```
+
+### ToolExecutionResult
+
+```csharp
+public sealed record ToolExecutionResult(string CallId, string ToolName, ToolResult Result);
+```
+
+### ToolExecutorOptions
+
+```csharp
+public sealed class ToolExecutorOptions
+{
+    public int MaxReadOnlyConcurrency { get; set; }
+}
+```
+
+`UseDefaults()` registers `PartitionedToolExecutor` as the default implementation.
+
 ### ITaskGraph
 
 ```csharp

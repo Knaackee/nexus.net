@@ -2,6 +2,7 @@ using FluentAssertions;
 using Microsoft.Extensions.AI;
 using Nexus.Core.Agents;
 using Nexus.Core.Contracts;
+using Nexus.Compaction;
 using Nexus.Memory;
 
 namespace Nexus.Memory.Tests;
@@ -148,5 +149,73 @@ public class InMemoryWorkingMemoryTests
         var result = await _memory.GetAsync<System.Text.Json.JsonElement>("complex");
         result.GetProperty("Name").GetString().Should().Be("Test");
         result.GetProperty("Value").GetInt32().Should().Be(42);
+    }
+}
+
+public class LongTermMemoryRecallProviderTests
+{
+    [Fact]
+    public async Task RecallAsync_Prepends_Recalled_Memory_From_Latest_User_Query()
+    {
+        var memory = new InMemoryLongTermMemory();
+        await memory.StoreAsync("Remember to use OAuth device flow for Copilot auth");
+        await memory.StoreAsync("Unrelated deployment note");
+
+        var provider = new LongTermMemoryRecallProvider(memory, new LongTermMemoryRecallOptions
+        {
+            MaxResults = 2,
+            MinimumRelevance = 0.2,
+        });
+
+        var result = await provider.RecallAsync(new CompactionRecallContext
+        {
+            OriginalMessages =
+            [
+                new ChatMessage(ChatRole.User, "How should Copilot auth work?"),
+                new ChatMessage(ChatRole.Assistant, "Old answer"),
+            ],
+            ActiveMessages =
+            [
+                new ChatMessage(ChatRole.Assistant, "[Conversation summary]\n- Auth was discussed."),
+                new ChatMessage(ChatRole.User, "Continue with auth design"),
+            ],
+            Compaction = new CompactionResult(
+            [
+                new ChatMessage(ChatRole.Assistant, "[Conversation summary]\n- Auth was discussed."),
+                new ChatMessage(ChatRole.User, "Continue with auth design"),
+            ],
+            180,
+            45,
+            "summary"),
+            WindowOptions = new ContextWindowOptions { MaxTokens = 200, TargetTokens = 100 },
+        });
+
+        result.Should().HaveCount(3);
+        result[0].Role.Should().Be(ChatRole.System);
+        result[0].Text.Should().Contain("[Recalled memory]");
+        result[0].Text.Should().Contain("OAuth device flow for Copilot auth");
+    }
+
+    [Fact]
+    public async Task RecallAsync_Returns_Active_Messages_When_No_Memory_Matches()
+    {
+        var memory = new InMemoryLongTermMemory();
+        await memory.StoreAsync("Completely different topic");
+
+        var provider = new LongTermMemoryRecallProvider(memory, new LongTermMemoryRecallOptions());
+        IReadOnlyList<ChatMessage> activeMessages =
+        [
+            new ChatMessage(ChatRole.Assistant, "Compacted summary"),
+        ];
+
+        var result = await provider.RecallAsync(new CompactionRecallContext
+        {
+            OriginalMessages = [new ChatMessage(ChatRole.User, "Need auth guidance")],
+            ActiveMessages = activeMessages,
+            Compaction = new CompactionResult(activeMessages, 120, 40, "summary"),
+            WindowOptions = new ContextWindowOptions(),
+        });
+
+        result.Should().BeEquivalentTo(activeMessages);
     }
 }

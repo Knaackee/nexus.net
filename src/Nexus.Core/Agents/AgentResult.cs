@@ -11,16 +11,26 @@ public record AgentResult
     public TokenUsageSummary? TokenUsage { get; init; }
     public decimal? EstimatedCost { get; init; }
 
-    public static AgentResult Success(string text) => new()
+    public static AgentResult Success(
+        string text,
+        TokenUsageSummary? tokenUsage = null,
+        decimal? estimatedCost = null) => new()
     {
         Status = AgentResultStatus.Success,
-        Text = text
+        Text = text,
+        TokenUsage = tokenUsage,
+        EstimatedCost = estimatedCost,
     };
 
-    public static AgentResult Failed(string reason) => new()
+    public static AgentResult Failed(
+        string reason,
+        TokenUsageSummary? tokenUsage = null,
+        decimal? estimatedCost = null) => new()
     {
         Status = AgentResultStatus.Failed,
-        Text = reason
+        Text = reason,
+        TokenUsage = tokenUsage,
+        EstimatedCost = estimatedCost,
     };
 
     public static AgentResult Cancelled() => new()
@@ -28,10 +38,26 @@ public record AgentResult
         Status = AgentResultStatus.Cancelled
     };
 
-    public static AgentResult Timeout(string reason) => new()
+    public static AgentResult Timeout(
+        string reason,
+        TokenUsageSummary? tokenUsage = null,
+        decimal? estimatedCost = null) => new()
     {
         Status = AgentResultStatus.Timeout,
-        Text = reason
+        Text = reason,
+        TokenUsage = tokenUsage,
+        EstimatedCost = estimatedCost,
+    };
+
+    public static AgentResult BudgetExceeded(
+        string reason,
+        TokenUsageSummary? tokenUsage = null,
+        decimal? estimatedCost = null) => new()
+    {
+        Status = AgentResultStatus.BudgetExceeded,
+        Text = reason,
+        TokenUsage = tokenUsage,
+        EstimatedCost = estimatedCost,
     };
 }
 

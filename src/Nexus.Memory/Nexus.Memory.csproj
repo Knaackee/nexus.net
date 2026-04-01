@@ -3,6 +3,7 @@
     <RootNamespace>Nexus.Memory</RootNamespace>
   </PropertyGroup>
   <ItemGroup>
+    <ProjectReference Include="..\Nexus.Compaction\Nexus.Compaction.csproj" />
     <ProjectReference Include="..\Nexus.Core\Nexus.Core.csproj" />
   </ItemGroup>
   <ItemGroup>

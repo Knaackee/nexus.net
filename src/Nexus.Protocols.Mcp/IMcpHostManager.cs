@@ -1,3 +1,5 @@
+using Microsoft.Extensions.AI;
+
 namespace Nexus.Protocols.Mcp;
 
 /// <summary>Manages connections to MCP servers and discovers tools/resources.</summary>
@@ -11,6 +13,9 @@ public interface IMcpHostManager : IAsyncDisposable
 
     /// <summary>Discover all tools across all connected servers.</summary>
     Task<IReadOnlyList<McpToolDescriptor>> DiscoverToolsAsync(CancellationToken ct = default);
+
+    /// <summary>Discover all MCP tools as AI functions ready for tool registration.</summary>
+    Task<IReadOnlyList<AIFunction>> DiscoverFunctionsAsync(CancellationToken ct = default);
 
     /// <summary>Discover all resources across all connected servers.</summary>
     Task<IReadOnlyList<McpResourceDescriptor>> DiscoverResourcesAsync(CancellationToken ct = default);

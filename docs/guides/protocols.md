@@ -4,7 +4,7 @@ Nexus integrates with three external agent protocols: MCP, A2A, and AG-UI.
 
 ## Model Context Protocol (MCP)
 
-`Nexus.Protocols.Mcp` adapts MCP tool servers into Nexus `ITool` instances.
+`Nexus.Protocols.Mcp` adapts MCP tool servers into Nexus tools and AI functions so they can be registered in the normal runtime tool registry.
 
 ### What is MCP?
 
@@ -17,14 +17,46 @@ services.AddNexus(nexus =>
 {
     nexus.AddMcp(mcp =>
     {
-        // MCP servers are configured per-agent via AgentDefinition
+                mcp.UseDefaults();
+                mcp.AddServer("filesystem", new StdioTransport(
+                        "npx",
+                        ["-y", "@modelcontextprotocol/server-filesystem", "/workspace"]));
     });
 });
 ```
 
+`Nexus.Defaults` now calls `AddMcp(...).UseDefaults()` automatically, so hosts such as `Nexus.Cli` only need to provide server configuration.
+
+### CLI Configuration
+
+`Nexus.Cli` loads MCP servers automatically from:
+
+- `.nexus/mcp.json` in the current project
+- `~/.nexus/mcp.json` in the user profile
+
+Project-local config overrides user config when both define the same server name.
+
+```json
+{
+    "servers": {
+        "filesystem": {
+            "command": "npx",
+            "args": ["-y", "@modelcontextprotocol/server-filesystem", "/workspace"],
+            "workingDirectory": ".",
+            "allowedTools": {
+                "include": ["read_file", "write_file"]
+            }
+        },
+        "docs": {
+            "endpoint": "https://example.com/mcp"
+        }
+    }
+}
+```
+
 ### Agent-Level MCP
 
-Specify MCP servers in the agent definition:
+Specify MCP servers in the agent definition when you want agent-owned MCP metadata in addition to builder-level registration:
 
 ```csharp
 var agent = await pool.SpawnAsync(new AgentDefinition

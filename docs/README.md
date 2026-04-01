@@ -18,8 +18,11 @@ Complete documentation for the Nexus Multi-Agent Orchestration Engine.
 ### Guides
 
 - [Orchestration](guides/orchestration.md) — Graph, sequence, parallel, and hierarchical execution
+- [External Brain & Task System](guides/external-brain-task-system.md) — Using Nexus with a task backend and a graph-database brain such as Ladybug
 - [Memory & Context](guides/memory.md) — Conversation history, working memory, context windows
 - [Guardrails](guides/guardrails.md) — PII redaction, prompt injection detection, content safety
+- [Permissions](guides/permissions.md) — Rule-based tool approval and interactive prompts
+- [Cost Tracking](guides/cost-tracking.md) — Token accounting and estimated USD cost aggregation
 - [Messaging](guides/messaging.md) — Inter-agent pub/sub, shared state, dead letter queue
 - [Checkpointing](guides/checkpointing.md) — Snapshot serialization and resume-from-failure
 - [Workflows DSL](guides/workflows-dsl.md) — JSON/YAML pipeline definitions
@@ -29,12 +32,23 @@ Complete documentation for the Nexus Multi-Agent Orchestration Engine.
 - [Testing](guides/testing.md) — Mock agents, fake clients, evaluation harnesses
 - [Middleware](guides/middleware.md) — Agent and tool pipeline extensibility
 
+### Recipes
+
+- [Recipe Index](recipes/README.md) — Choose the right Nexus setup by use case
+- [Existing Provider UI](recipes/existing-provider-ui.md) — Keep your own provider/model picker UI and hand the runtime choices to Nexus
+- [Single Agent With Tools](recipes/single-agent-with-tools.md) — Smallest useful setup for one tool-using assistant
+- [Chat Session With Memory](recipes/chat-session-with-memory.md) — Session-aware loop with compaction and recall
+- [Human-Approved Workflow](recipes/human-approved-workflow.md) — Research, plan, execute, review with approval gates
+- [Task System + Graph Brain](recipes/task-system-graph-brain.md) — Nexus over an external task backend and Ladybug-style graph memory
+
 ### API Reference
 
 - [Nexus.Core](api/nexus-core.md) — Core abstractions and contracts
 - [Nexus.Orchestration](api/nexus-orchestration.md) — Orchestrator, agent pool, task graphs
 - [Nexus.Memory](api/nexus-memory.md) — Conversation store and working memory
 - [Nexus.Guardrails](api/nexus-guardrails.md) — Guardrail pipeline and built-in guards
+- [Nexus.Permissions](api/nexus-permissions.md) — Rule-based tool approval and prompts
+- [Nexus.CostTracking](api/nexus-cost-tracking.md) — Cost tracker, pricing provider, chat client wrapper
 - [Nexus.Messaging](api/nexus-messaging.md) — Message bus and shared state
 - [Nexus.Workflows.Dsl](api/nexus-workflows-dsl.md) — Workflow loader, validator, serializer
 - [Nexus.Protocols](api/nexus-protocols.md) — MCP, A2A, AG-UI adapters

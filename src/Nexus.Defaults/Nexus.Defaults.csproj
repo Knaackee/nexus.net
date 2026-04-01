@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>Nexus.Defaults</RootNamespace>
+    <Description>Batteries-included convenience wiring for Nexus.</Description>
+    <PackageTags>nexus;defaults;quickstart</PackageTags>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Nexus.AgentLoop\Nexus.AgentLoop.csproj" />
+    <ProjectReference Include="..\Nexus.Commands\Nexus.Commands.csproj" />
+    <ProjectReference Include="..\Nexus.Compaction\Nexus.Compaction.csproj" />
+    <ProjectReference Include="..\Nexus.Configuration\Nexus.Configuration.csproj" />
+    <ProjectReference Include="..\Nexus.Core\Nexus.Core.csproj" />
+    <ProjectReference Include="..\Nexus.CostTracking\Nexus.CostTracking.csproj" />
+    <ProjectReference Include="..\Nexus.Memory\Nexus.Memory.csproj" />
+    <ProjectReference Include="..\Nexus.Orchestration\Nexus.Orchestration.csproj" />
+    <ProjectReference Include="..\Nexus.Permissions\Nexus.Permissions.csproj" />
+    <ProjectReference Include="..\Nexus.Protocols.Mcp\Nexus.Protocols.Mcp.csproj" />
+    <ProjectReference Include="..\Nexus.Sessions\Nexus.Sessions.csproj" />
+    <ProjectReference Include="..\Nexus.Skills\Nexus.Skills.csproj" />
+    <ProjectReference Include="..\Nexus.Tools.Standard\Nexus.Tools.Standard.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.AI.Abstractions" Version="9.5.0" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.0" />
+  </ItemGroup>
+</Project>

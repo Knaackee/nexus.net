@@ -13,10 +13,15 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\src\Nexus.AgentLoop\Nexus.AgentLoop.csproj" />
+    <ProjectReference Include="..\..\src\Nexus.Commands\Nexus.Commands.csproj" />
+    <ProjectReference Include="..\..\src\Nexus.Defaults\Nexus.Defaults.csproj" />
     <ProjectReference Include="..\..\src\Nexus.Core\Nexus.Core.csproj" />
     <ProjectReference Include="..\..\src\Nexus.Orchestration\Nexus.Orchestration.csproj" />
     <ProjectReference Include="..\..\src\Nexus.Memory\Nexus.Memory.csproj" />
     <ProjectReference Include="..\..\src\Nexus.Guardrails\Nexus.Guardrails.csproj" />
+    <ProjectReference Include="..\..\src\Nexus.Protocols.Mcp\Nexus.Protocols.Mcp.csproj" />
+    <ProjectReference Include="..\..\src\Nexus.Skills\Nexus.Skills.csproj" />
   </ItemGroup>
 
   <ItemGroup>

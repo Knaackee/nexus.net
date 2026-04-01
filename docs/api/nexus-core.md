@@ -46,10 +46,11 @@ public record AgentResult
     public TokenUsageSummary? TokenUsage { get; init; }
     public decimal? EstimatedCost { get; init; }
 
-    public static AgentResult Success(string text);
-    public static AgentResult Failed(string reason);
+    public static AgentResult Success(string text, TokenUsageSummary? tokenUsage = null, decimal? estimatedCost = null);
+    public static AgentResult Failed(string reason, TokenUsageSummary? tokenUsage = null, decimal? estimatedCost = null);
     public static AgentResult Cancelled();
-    public static AgentResult Timeout(string reason);
+    public static AgentResult Timeout(string reason, TokenUsageSummary? tokenUsage = null, decimal? estimatedCost = null);
+    public static AgentResult BudgetExceeded(string reason, TokenUsageSummary? tokenUsage = null, decimal? estimatedCost = null);
 }
 ```
 
@@ -201,6 +202,8 @@ public class NexusBuilder
     public NexusBuilder AddOrchestration(Action<OrchestrationBuilder>? configure = null);
     public NexusBuilder AddMessaging(Action<MessagingBuilder>? configure = null);
     public NexusBuilder AddGuardrails(Action<GuardrailBuilder>? configure = null);
+    public NexusBuilder AddPermissions(Action<PermissionBuilder>? configure = null);
+    public NexusBuilder AddCostTracking(Action<CostTrackingBuilder>? configure = null);
     public NexusBuilder AddMemory(Action<MemoryBuilder>? configure = null);
     public NexusBuilder AddCheckpointing(Action<CheckpointBuilder>? configure = null);
     public NexusBuilder AddMcp(Action<McpBuilder>? configure = null);

@@ -36,6 +36,48 @@ public class DefaultWorkflowLoaderTests
     }
 
     [Fact]
+    public void LoadFromString_Json_With_RequiresApproval()
+    {
+        var json = """
+        {
+            "id": "wf-approval",
+            "name": "Approval Workflow",
+            "nodes": [
+                {
+                    "id": "n1",
+                    "name": "Safe Node",
+                    "description": "No approval needed"
+                },
+                {
+                    "id": "n2",
+                    "name": "Dangerous Node",
+                    "description": "Needs approval",
+                    "requiresApproval": true
+                }
+            ]
+        }
+        """;
+
+        var definition = _loader.LoadFromString(json, "json");
+
+        definition.Nodes[0].RequiresApproval.Should().BeFalse();
+        definition.Nodes[1].RequiresApproval.Should().BeTrue();
+    }
+
+    [Fact]
+    public void RequiresApproval_DefaultsToFalse()
+    {
+        var node = new NodeDefinition
+        {
+            Id = "n1",
+            Name = "Test",
+            Description = "Test node"
+        };
+
+        node.RequiresApproval.Should().BeFalse();
+    }
+
+    [Fact]
     public void LoadFromString_Json_With_Edges()
     {
         var json = """

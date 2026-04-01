@@ -1,6 +1,6 @@
 # Memory & Context
 
-Nexus provides two memory stores: **conversation history** for persistent message logs, and **working memory** for ephemeral key-value state.
+Nexus provides three memory surfaces: **conversation history** for persistent message logs, **working memory** for ephemeral key-value state, and **long-term memory** for recalling durable facts back into a loop after compaction.
 
 ## Conversation Store
 
@@ -106,6 +106,54 @@ await memory.RemoveAsync("research_findings");
 await memory.ClearAsync();
 ```
 
+## Long-Term Memory
+
+`ILongTermMemory` stores durable facts and can recall them later using a query:
+
+```csharp
+public interface ILongTermMemory
+{
+    Task StoreAsync(string content, IDictionary<string, string>? metadata = null, CancellationToken ct = default);
+    Task<IReadOnlyList<MemoryResult>> RecallAsync(string query, int maxResults = 5, CancellationToken ct = default);
+}
+```
+
+### Usage
+
+```csharp
+var longTermMemory = sp.GetRequiredService<ILongTermMemory>();
+
+await longTermMemory.StoreAsync(
+    "Use OAuth device flow for Copilot authentication.",
+    new Dictionary<string, string> { ["topic"] = "auth" });
+
+var recalled = await longTermMemory.RecallAsync("Copilot auth", maxResults: 3);
+```
+
+### Post-Compaction Recall
+
+`Nexus.Compaction` and `Nexus.Memory` now compose through `ICompactionRecallProvider`.
+The built-in `LongTermMemoryRecallProvider` queries `ILongTermMemory` after compaction and prepends a synthetic memory message back into the active context.
+
+```csharp
+services.AddNexus(nexus =>
+{
+    nexus.AddCompaction(c => c.UseDefaults());
+    nexus.AddMemory(m =>
+    {
+        m.UseInMemory();
+        m.UseLongTermMemoryRecall(options =>
+        {
+            options.MaxResults = 3;
+            options.MinimumRelevance = 0.2;
+        });
+    });
+    nexus.AddAgentLoop(loop => loop.UseDefaults());
+});
+```
+
+By default the provider uses the latest user message before compaction as its recall query. Consumers can override `QueryFactory`, `FormatMessage`, `MaxResults`, `MinimumRelevance`, `Priority`, and `MessageRole`.
+
 ## Configuration
 
 Enable memory in the builder:
@@ -123,5 +171,6 @@ services.AddNexus(nexus =>
 ## Design Notes
 
 - `IConversationStore` and `IWorkingMemory` are **forward-declared** in `Nexus.Core.Contracts`. The in-memory implementations live in the `Nexus.Memory` package.
+- `ILongTermMemory` lives in `Nexus.Memory` and can be used independently or as a post-compaction recall source.
 - Messages use `Microsoft.Extensions.AI.ChatMessage` — compatible with any `IChatClient`.
 - `ConversationId` is a strongly-typed wrapper around `Guid` with JSON serialization support.

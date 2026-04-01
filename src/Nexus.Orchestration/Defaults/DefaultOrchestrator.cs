@@ -3,8 +3,10 @@ using System.Diagnostics;
 using System.Reactive.Subjects;
 using System.Runtime.CompilerServices;
 using System.Threading.Channels;
+using Microsoft.Extensions.DependencyInjection;
 using Nexus.Core.Agents;
 using Nexus.Core.Events;
+using Nexus.Core.Pipeline;
 
 namespace Nexus.Orchestration.Defaults;
 
@@ -93,8 +95,8 @@ public sealed class DefaultOrchestrator : IOrchestrator, IDisposable
                         await sem.WaitAsync(linkedCt).ConfigureAwait(false);
                         try
                         {
-                            var agent = await _pool.SpawnAsync(
-                                new AgentDefinition { Name = $"agent-{node.TaskId}" }, linkedCt).ConfigureAwait(false);
+                            var taskNode = (DefaultTaskNode)node;
+                            var agent = await ResolveAgentAsync(taskNode.Task, linkedCt).ConfigureAwait(false);
 
                             await channel.Writer.WriteAsync(
                                 new NodeStartedEvent(graph.Id, node.TaskId, agent.Id), linkedCt).ConfigureAwait(false);
@@ -103,7 +105,7 @@ public sealed class DefaultOrchestrator : IOrchestrator, IDisposable
 
                             try
                             {
-                                await foreach (var evt in agent.ExecuteStreamingAsync(node.Task, context, linkedCt))
+                                await foreach (var evt in ExecuteAgentStreamingAsync(agent, taskNode.Task, context, linkedCt))
                                 {
                                     await channel.Writer.WriteAsync(
                                         new AgentEventInGraph(graph.Id, node.TaskId, evt), linkedCt).ConfigureAwait(false);
@@ -235,6 +237,35 @@ public sealed class DefaultOrchestrator : IOrchestrator, IDisposable
     private OrchestratorAgentContext CreateAgentContext(IAgent agent)
     {
         return new OrchestratorAgentContext(agent, _services);
+    }
+
+    private async Task<IAgent> ResolveAgentAsync(AgentTask task, CancellationToken ct)
+    {
+        if (task.AssignedAgent is AgentId assignedAgent)
+        {
+            var existing = _pool.ActiveAgents.FirstOrDefault(agent => agent.Id == assignedAgent);
+            if (existing is not null)
+                return existing;
+        }
+
+        if (task.AgentDefinition is not null)
+            return await _pool.SpawnAsync(task.AgentDefinition, ct).ConfigureAwait(false);
+
+        return await _pool.SpawnAsync(new AgentDefinition { Name = $"agent-{task.Id}" }, ct).ConfigureAwait(false);
+    }
+
+    private IAsyncEnumerable<AgentEvent> ExecuteAgentStreamingAsync(
+        IAgent agent,
+        AgentTask task,
+        IAgentContext context,
+        CancellationToken ct)
+    {
+        var builder = new AgentPipelineBuilder();
+        foreach (var middleware in _services.GetServices<IAgentMiddleware>())
+            builder.Use(middleware);
+
+        var pipeline = builder.BuildStreaming((innerTask, innerContext, innerCt) => agent.ExecuteStreamingAsync(innerTask, innerContext, innerCt));
+        return pipeline(task, context, ct);
     }
 
     public void Dispose()

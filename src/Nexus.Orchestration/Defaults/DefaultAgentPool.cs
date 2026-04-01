@@ -3,6 +3,8 @@ using System.Reactive.Subjects;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Nexus.Core.Agents;
+using Nexus.Core.Contracts;
+using Nexus.Core.Pipeline;
 
 namespace Nexus.Orchestration.Defaults;
 
@@ -31,7 +33,10 @@ public sealed class DefaultAgentPool : IAgentPool, IDisposable
             SystemPrompt = definition.SystemPrompt,
             ToolNames = definition.ToolNames,
             MaxIterations = definition.Budget?.MaxIterations ?? 25,
-        });
+        }, _serviceProvider.GetService<IToolExecutor>());
+
+        if (_serviceProvider.GetService<IBudgetTracker>() is { } budgetTracker)
+            _ = budgetTracker.SetLimitAsync(agent.Id, definition.Budget, ct);
 
         _agents[agent.Id] = agent;
         _lifecycle.OnNext(new AgentLifecycleEvent(agent.Id, AgentState.Created, AgentState.Idle, DateTimeOffset.UtcNow));

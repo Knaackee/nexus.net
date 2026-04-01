@@ -13,6 +13,7 @@
 using System.Runtime.CompilerServices;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
+using Nexus.CostTracking;
 using Nexus.Core.Agents;
 using Nexus.Core.Configuration;
 using Nexus.Core.Contracts;
@@ -31,6 +32,7 @@ services.AddNexus(nexus =>
 {
     nexus.UseChatClient(_ => new EchoChatClient());
     nexus.AddOrchestration(o => o.UseDefaults());
+    nexus.AddCostTracking(c => c.AddModel("multi-agent-demo", input: 0.20m, output: 0.80m));
     nexus.AddMemory(m => m.UseInMemory());
     nexus.AddMessaging(m => m.UseInMemory());
     nexus.AddCheckpointing(c => c.UseInMemory());
@@ -130,6 +132,10 @@ await foreach (var evt in orchestrator.ExecuteGraphStreamingAsync(graph))
             Console.ForegroundColor = ConsoleColor.Green;
             var completedText = completed.Result.Text ?? "";
             Console.WriteLine($"\n  ✓ Node {completed.NodeId} completed: {completedText[..Math.Min(60, completedText.Length)]}...");
+            if (completed.Result.TokenUsage is { } usage)
+                Console.WriteLine($"    Tokens: {usage.TotalInputTokens} input, {usage.TotalOutputTokens} output, {usage.TotalTokens} total");
+            if (completed.Result.EstimatedCost is decimal estimatedCost)
+                Console.WriteLine($"    Estimated cost: ${estimatedCost:F6}");
             Console.ResetColor();
             break;
 
@@ -279,10 +285,16 @@ Console.WriteLine($"Sequence result: {seqResult.Status} ({seqResult.TaskResults.
 
 foreach (var (taskId, taskResult) in seqResult.TaskResults)
 {
-    var status = taskResult.Status == AgentResultStatus.Success ? "✓" : "✗";
+    var status = taskResult.Status == AgentResultStatus.Success ? "✓" : taskResult.Status.ToString();
     var text = taskResult.Text ?? "";
     Console.WriteLine($"  {status} Task {taskId}: {text[..Math.Min(50, text.Length)]}");
+    if (taskResult.EstimatedCost is decimal estimatedCost)
+        Console.WriteLine($"    Cost: ${estimatedCost:F6}");
 }
+
+var tracker = sp.GetRequiredService<ICostTracker>();
+var totals = await tracker.GetSnapshotAsync();
+Console.WriteLine($"\nTracked usage across orchestration: {totals.TotalInputTokens} input, {totals.TotalOutputTokens} output, ${totals.TotalCost:F6} estimated");
 
 Console.WriteLine("\nDone.");
 
@@ -305,7 +317,9 @@ sealed class EchoChatClient : IChatClient
 
         var reply = new ChatMessage(ChatRole.Assistant,
             $"[{agentHint}] Response to: {last?.Text ?? "..."}");
-        return Task.FromResult(new ChatResponse([reply]));
+        var response = new ChatResponse([reply]);
+        UsageMetadataHelper.TrySetModelAndUsage(response, "multi-agent-demo", inputTokens: 80, outputTokens: 30);
+        return Task.FromResult(response);
     }
 
     public async IAsyncEnumerable<ChatResponseUpdate> GetStreamingResponseAsync(
@@ -318,5 +332,41 @@ sealed class EchoChatClient : IChatClient
             Role = ChatRole.Assistant,
             Contents = [new TextContent(response.Text ?? "...")],
         };
+        var usageUpdate = new ChatResponseUpdate { Role = ChatRole.Assistant, Contents = [] };
+        UsageMetadataHelper.TrySetModelAndUsage(usageUpdate, "multi-agent-demo", inputTokens: 80, outputTokens: 30);
+        yield return usageUpdate;
+    }
+}
+
+static class UsageMetadataHelper
+{
+    public static void TrySetModelAndUsage(object target, string modelId, long inputTokens, long outputTokens)
+    {
+        TrySetProperty(target, "ModelId", modelId);
+
+        var usageProperty = target.GetType().GetProperty("Usage");
+        if (usageProperty?.CanWrite != true)
+            return;
+
+        var usage = Activator.CreateInstance(usageProperty.PropertyType);
+        if (usage is null)
+            return;
+
+        TrySetProperty(usage, "InputTokenCount", inputTokens);
+        TrySetProperty(usage, "OutputTokenCount", outputTokens);
+        TrySetProperty(usage, "TotalTokenCount", inputTokens + outputTokens);
+        TrySetProperty(usage, "PromptTokenCount", inputTokens);
+        TrySetProperty(usage, "CompletionTokenCount", outputTokens);
+        usageProperty.SetValue(target, usage);
+    }
+
+    private static void TrySetProperty(object target, string propertyName, object value)
+    {
+        var property = target.GetType().GetProperty(propertyName);
+        if (property?.CanWrite != true)
+            return;
+
+        var targetType = Nullable.GetUnderlyingType(property.PropertyType) ?? property.PropertyType;
+        property.SetValue(target, Convert.ChangeType(value, targetType, System.Globalization.CultureInfo.InvariantCulture));
     }
 }

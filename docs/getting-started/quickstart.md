@@ -9,10 +9,12 @@ Nexus uses `Microsoft.Extensions.DependencyInjection`. Register everything throu
 ```csharp
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
+using Nexus.CostTracking;
 using Nexus.Core.Agents;
 using Nexus.Core.Configuration;
 using Nexus.Core.Tools;
 using Nexus.Orchestration;
+using Nexus.Permissions;
 
 var services = new ServiceCollection();
 
@@ -24,12 +26,23 @@ services.AddNexus(nexus =>
     // Enable orchestration with default settings
     nexus.AddOrchestration(o => o.UseDefaults());
 
+    // Read-only tools run automatically; mutating tools require approval.
+    nexus.AddPermissions(p => p
+        .UsePreset(PermissionPreset.Interactive)
+        .UseConsolePrompt());
+
+    // Optional: aggregate token usage and estimated USD cost.
+    nexus.AddCostTracking(c => c.AddModel("gpt-4o", input: 2.50m, output: 10.00m));
+
     // Enable in-memory conversation/working memory
     nexus.AddMemory(m => m.UseInMemory());
 });
 
 var sp = services.BuildServiceProvider();
 ```
+
+`UseDefaults()` now wires a tool executor into `ChatAgent`.
+Contiguous read-only tool calls are executed in parallel, while mutating tools remain serial.
 
 ## 2. Register Tools
 
@@ -43,7 +56,10 @@ tools.Register(new LambdaTool(
     "Returns the current UTC time",
     (input, context, ct) =>
         Task.FromResult(ToolResult.Success(DateTime.UtcNow.ToString("O")))
-));
+)
+{
+    Annotations = new ToolAnnotations { IsReadOnly = true, IsIdempotent = true }
+});
 
 tools.Register(new LambdaTool(
     "calculate",
@@ -54,7 +70,10 @@ tools.Register(new LambdaTool(
         // Your evaluation logic here
         return Task.FromResult(ToolResult.Success($"Result: {expr}"));
     }
-));
+)
+{
+    Annotations = new ToolAnnotations { IsReadOnly = true, IsIdempotent = true }
+});
 ```
 
 ## 3. Spawn an Agent
@@ -69,6 +88,7 @@ var agent = await pool.SpawnAsync(new AgentDefinition
     Name = "Assistant",
     SystemPrompt = "You are a helpful assistant. Use tools when needed.",
     ToolNames = ["get_time", "calculate"],
+    Budget = new AgentBudget { MaxCostUsd = 1.00m },
 });
 ```
 
@@ -80,15 +100,36 @@ Run a single task through the orchestrator:
 var orchestrator = sp.GetRequiredService<IOrchestrator>();
 
 var result = await orchestrator.ExecuteSequenceAsync([
-    new AgentTask
-    {
-        Id = TaskId.New(),
-        Description = "What time is it? Also calculate 42 * 17.",
-        AssignedAgent = agent.Id,
-    }
+    AgentTask.Create("What time is it? Also calculate 42 * 17.") with { AssignedAgent = agent.Id }
 ]);
 
-Console.WriteLine(result.TaskResults.Values.First().Text);
+var taskResult = result.TaskResults.Values.First();
+Console.WriteLine(taskResult.Text);
+Console.WriteLine(taskResult.EstimatedCost);
+Console.WriteLine(taskResult.TokenUsage?.TotalTokens);
+
+var tracker = sp.GetRequiredService<ICostTracker>();
+var costs = await tracker.GetSnapshotAsync();
+Console.WriteLine($"Estimated USD: ${costs.TotalCost:F6}");
+```
+
+If a task crosses its configured `AgentBudget.MaxCostUsd`, the completed task result returns `AgentResultStatus.BudgetExceeded` instead of `Success`.
+
+If you register a mutating tool, mark it explicitly and let the permissions package arbitrate it:
+
+```csharp
+tools.Register(new LambdaTool(
+    "write_file",
+    "Writes text to disk",
+    (input, context, ct) => Task.FromResult(ToolResult.Success("ok")))
+{
+    Annotations = new ToolAnnotations
+    {
+        IsReadOnly = false,
+        RequiresApproval = true,
+        IsDestructive = false,
+    }
+});
 ```
 
 ## 5. Streaming Execution
@@ -97,16 +138,35 @@ For real-time output, use the streaming variants:
 
 ```csharp
 await foreach (var evt in orchestrator.ExecuteSequenceStreamingAsync([
-    new AgentTask
-    {
-        Id = TaskId.New(),
-        Description = "Write a haiku about programming.",
-        AssignedAgent = agent.Id,
-    }
+    AgentTask.Create("Write a haiku about programming.") with { AssignedAgent = agent.Id }
 ]))
 {
     Console.Write(evt); // TextChunkEvent, AgentCompletedEvent, etc.
 }
+```
+
+## 6. Cost Tracking
+
+`Nexus.CostTracking` wraps the registered `IChatClient` and records usage whenever the provider includes usage metadata in `ChatResponse` or `ChatResponseUpdate`.
+
+```csharp
+var tracker = sp.GetRequiredService<ICostTracker>();
+var snapshot = await tracker.GetSnapshotAsync();
+
+Console.WriteLine(snapshot.TotalInputTokens);
+Console.WriteLine(snapshot.TotalOutputTokens);
+Console.WriteLine(snapshot.TotalCost);
+```
+
+The same usage is also exposed on completed task results:
+
+```csharp
+var taskResult = result.TaskResults.Values.First();
+
+Console.WriteLine(taskResult.TokenUsage?.TotalInputTokens);
+Console.WriteLine(taskResult.TokenUsage?.TotalOutputTokens);
+Console.WriteLine(taskResult.EstimatedCost);
+Console.WriteLine(taskResult.Status); // Success or BudgetExceeded
 ```
 
 ## Multiple Chat Clients
@@ -136,6 +196,8 @@ var agent = await pool.SpawnAsync(new AgentDefinition
 ## Next Steps
 
 - [Orchestration Guide](../guides/orchestration.md) — Multi-agent graphs, parallel execution
+- [Permissions Guide](../guides/permissions.md) — Rule-based tool approval and interactive prompts
+- [Cost Tracking Guide](../guides/cost-tracking.md) — Pricing registration and aggregated usage snapshots
 - [Guardrails Guide](../guides/guardrails.md) — Add safety checks to your agents
 - [Memory Guide](../guides/memory.md) — Conversation history and context windows
 - [Workflow DSL Guide](../guides/workflows-dsl.md) — Define pipelines in JSON/YAML

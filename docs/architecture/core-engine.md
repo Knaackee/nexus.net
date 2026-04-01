@@ -74,7 +74,10 @@ AgentResult.Success("The answer is 42");
 AgentResult.Failed("Model returned an error");
 AgentResult.Cancelled();
 AgentResult.Timeout("Exceeded 5 minute limit");
+AgentResult.BudgetExceeded("Cost limit reached");
 ```
+
+At runtime, `ChatAgent` can populate `TokenUsage` and `EstimatedCost` automatically when the underlying chat client exposes usage metadata.
 
 ### AgentTask
 

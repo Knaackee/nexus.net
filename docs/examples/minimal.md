@@ -11,18 +11,22 @@ The `Nexus.Examples.Minimal` project demonstrates a single agent with tools and 
 - Spawning an agent through `IAgentPool`
 - Running a simple task via `IOrchestrator`
 - Adding guardrails for input validation
+- Configuring interactive permissions for mutating tools
+- Tracking token usage and estimated cost
 
 ## Code
 
 ```csharp
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
+using Nexus.CostTracking;
 using Nexus.Core.Agents;
 using Nexus.Core.Configuration;
 using Nexus.Core.Tools;
 using Nexus.Orchestration;
 using Nexus.Guardrails;
 using Nexus.Guardrails.BuiltIn;
+using Nexus.Permissions;
 
 var services = new ServiceCollection();
 
@@ -30,6 +34,10 @@ services.AddNexus(nexus =>
 {
     nexus.UseChatClient(_ => myLlmClient);
     nexus.AddOrchestration(o => o.UseDefaults());
+    nexus.AddPermissions(p => p
+        .UsePreset(PermissionPreset.Interactive)
+        .UseConsolePrompt());
+    nexus.AddCostTracking(c => c.AddModel("gpt-4o", input: 2.50m, output: 10.00m));
     nexus.AddMemory(m => m.UseInMemory());
     nexus.AddGuardrails(g =>
     {
@@ -43,7 +51,10 @@ var sp = services.BuildServiceProvider();
 // Register tools
 var tools = sp.GetRequiredService<IToolRegistry>();
 tools.Register(new LambdaTool("get_time", "Current UTC time",
-    (_, _, _) => Task.FromResult(ToolResult.Success(DateTime.UtcNow.ToString("O")))));
+    (_, _, _) => Task.FromResult(ToolResult.Success(DateTime.UtcNow.ToString("O"))))
+{
+    Annotations = new ToolAnnotations { IsReadOnly = true, IsIdempotent = true }
+});
 
 // Spawn agent
 var pool = sp.GetRequiredService<IAgentPool>();
@@ -66,15 +77,14 @@ if (!inputCheck.IsAllowed)
 // Execute
 var orchestrator = sp.GetRequiredService<IOrchestrator>();
 var result = await orchestrator.ExecuteSequenceAsync([
-    new AgentTask
-    {
-        Id = TaskId.New(),
-        Description = "What time is it?",
-        AssignedAgent = agent.Id,
-    }
+    AgentTask.Create("What time is it?") with { AssignedAgent = agent.Id }
 ]);
 
 Console.WriteLine(result.TaskResults.Values.First().Text);
+
+var tracker = sp.GetRequiredService<ICostTracker>();
+var costs = await tracker.GetSnapshotAsync();
+Console.WriteLine($"Estimated USD: ${costs.TotalCost:F6}");
 ```
 
 ## Running

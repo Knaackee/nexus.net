@@ -148,7 +148,7 @@ public sealed class BudgetGuardMiddleware : IAgentMiddleware
         AgentTask task, IAgentContext ctx, AgentExecutionDelegate next, CancellationToken ct)
     {
         if (ctx.Budget is not null && !await ctx.Budget.HasBudgetAsync(ctx.Agent.Id, ct).ConfigureAwait(false))
-            return AgentResult.Failed("Budget exhausted");
+            return AgentResult.BudgetExceeded("Budget exhausted");
 
         return await next(task, ctx, ct).ConfigureAwait(false);
     }
@@ -159,8 +159,8 @@ public sealed class BudgetGuardMiddleware : IAgentMiddleware
     {
         if (ctx.Budget is not null && !await ctx.Budget.HasBudgetAsync(ctx.Agent.Id, ct).ConfigureAwait(false))
         {
-            yield return new AgentFailedEvent(ctx.Agent.Id,
-                new InvalidOperationException("Budget exhausted"));
+            yield return new AgentCompletedEvent(ctx.Agent.Id,
+                AgentResult.BudgetExceeded("Budget exhausted"));
             yield break;
         }
 
@@ -168,15 +168,19 @@ public sealed class BudgetGuardMiddleware : IAgentMiddleware
         {
             yield return evt;
 
-            if (evt is TokenUsageEvent usage && usage.EstimatedCost.HasValue && ctx.Budget is not null)
+            if (evt is TokenUsageEvent usage && ctx.Budget is not null)
             {
                 await ctx.Budget.TrackUsageAsync(
                     ctx.Agent.Id, usage.InputTokens, usage.OutputTokens, usage.EstimatedCost, ct).ConfigureAwait(false);
 
                 if (!await ctx.Budget.HasBudgetAsync(ctx.Agent.Id, ct).ConfigureAwait(false))
                 {
-                    yield return new AgentFailedEvent(ctx.Agent.Id,
-                        new InvalidOperationException("Budget exceeded during streaming"));
+                    var status = await ctx.Budget.GetStatusAsync(ctx.Agent.Id, ct).ConfigureAwait(false);
+                    yield return new AgentCompletedEvent(ctx.Agent.Id,
+                        AgentResult.BudgetExceeded(
+                            "Budget exceeded during streaming",
+                            new TokenUsageSummary(status.TotalInputTokens, status.TotalOutputTokens, status.TotalInputTokens + status.TotalOutputTokens),
+                            status.TotalCost));
                     yield break;
                 }
             }
