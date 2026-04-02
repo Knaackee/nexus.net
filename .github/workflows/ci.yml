@@ -30,11 +30,13 @@ jobs:
       run: dotnet build Nexus.sln --no-restore --configuration Release
 
     - name: Test
-      run: dotnet test Nexus.sln --no-build --configuration Release --verbosity normal --logger "trx;LogFileName=test-results.trx" --filter "FullyQualifiedName!~Nexus.Cli.Tests&FullyQualifiedName!~Nexus.Live.Integration.Tests"
+      run: dotnet test Nexus.sln --no-build --configuration Release --verbosity normal --logger "trx;LogFileName=test-results.trx" --collect:"XPlat Code Coverage" --results-directory TestResults --filter "FullyQualifiedName!~Nexus.Live.Integration.Tests"
 
     - name: Upload test results
       uses: actions/upload-artifact@v4
       if: always()
       with:
         name: test-results
-        path: '**/TestResults/*.trx'
+        path: |
+          **/TestResults/*.trx
+          **/TestResults/**/coverage.cobertura.xml

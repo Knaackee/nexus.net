@@ -1,6 +1,8 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <RootNamespace>Nexus.Telemetry</RootNamespace>
+    <Description>OpenTelemetry traces and metrics middleware for Nexus agents.</Description>
+    <PackageTags>nexus;telemetry;opentelemetry;metrics</PackageTags>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\Nexus.Core\Nexus.Core.csproj" />

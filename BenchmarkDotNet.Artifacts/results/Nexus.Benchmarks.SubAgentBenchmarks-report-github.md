@@ -10,4 +10,4 @@ AMD Ryzen 9 3900X, 1 CPU, 24 logical and 12 physical cores
 ```
 | Method               | Mean     | Error     | StdDev    | Gen0   | Gen1   | Allocated |
 |--------------------- |---------:|----------:|----------:|-------:|-------:|----------:|
-| RunParallelSubAgents | 3.689 μs | 0.0675 μs | 0.0632 μs | 0.9995 | 0.0153 |    8.2 KB |
+| RunParallelSubAgents | 3.670 μs | 0.0723 μs | 0.1930 μs | 0.9995 | 0.0153 |    8.2 KB |

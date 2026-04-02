@@ -1,6 +1,8 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <RootNamespace>Nexus.Protocols.AgUi</RootNamespace>
+    <Description>AG-UI event bridge for frontend streaming.</Description>
+    <PackageTags>nexus;agui;streaming;events</PackageTags>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\Nexus.Core\Nexus.Core.csproj" />

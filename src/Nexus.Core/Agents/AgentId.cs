@@ -15,7 +15,7 @@ public readonly record struct AgentId(Guid Value)
     public static implicit operator string(AgentId id) => id.ToString();
 }
 
-public sealed class AgentIdJsonConverter : JsonConverter<AgentId>
+internal sealed class AgentIdJsonConverter : JsonConverter<AgentId>
 {
     public override AgentId Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {

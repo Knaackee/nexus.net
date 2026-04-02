@@ -2,6 +2,9 @@ using Nexus.Core.Agents;
 
 namespace Nexus.Orchestration;
 
+/// <summary>
+/// Orchestrates agent task execution across graphs, sequences, parallel branches, and hierarchies.
+/// </summary>
 public interface IOrchestrator
 {
     Task<OrchestrationResult> ExecuteGraphAsync(ITaskGraph graph, CancellationToken ct = default);

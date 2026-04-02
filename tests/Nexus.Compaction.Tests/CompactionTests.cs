@@ -124,6 +124,91 @@ public sealed class DefaultCompactionServiceTests
         result.Messages.Select(message => message.Text).Should().ContainInOrder("memory-b", "memory-a", "Compacted summary");
     }
 
+    [Fact]
+    public void ShouldCompact_Returns_False_When_Below_Threshold_And_TargetTokens()
+    {
+        var tokenCounter = new DefaultTokenCounter();
+        var monitor = new DefaultContextWindowMonitor(tokenCounter);
+        var service = new DefaultCompactionService(
+            [new MicroCompactionStrategy()],
+            monitor,
+            tokenCounter,
+            new CompactionOptions { AutoCompactThreshold = 0.8 });
+
+        var messages = new List<ChatMessage>
+        {
+            new(ChatRole.User, "short"),
+        };
+
+        service.ShouldCompact(messages, new ContextWindowOptions { MaxTokens = 128_000, TargetTokens = 100_000, ReservedForOutput = 8_000, ReservedForTools = 4_000 })
+            .Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task CompactAsync_Returns_None_When_No_Strategy_Applies()
+    {
+        var tokenCounter = new DefaultTokenCounter();
+        var monitor = new DefaultContextWindowMonitor(tokenCounter);
+        var service = new DefaultCompactionService(
+            [new MicroCompactionStrategy()],
+            monitor,
+            tokenCounter,
+            new CompactionOptions { RecentMessagesToKeep = 100 });
+
+        var messages = new List<ChatMessage>
+        {
+            new(ChatRole.User, "hello"),
+            new(ChatRole.Assistant, "world"),
+        };
+
+        var result = await service.CompactAsync(
+            messages,
+            new ContextWindowOptions { MaxTokens = 128_000, TargetTokens = 100_000 },
+            new FakeChatClient("unused"));
+
+        result.StrategyUsed.Should().Be("none");
+        result.TokensAfter.Should().Be(result.TokensBefore);
+    }
+
+    [Fact]
+    public void TokenCounter_Empty_Messages_Returns_Zero()
+    {
+        var counter = new DefaultTokenCounter();
+        counter.CountTokens([], systemPrompt: null).Should().Be(0);
+    }
+
+    [Fact]
+    public void TokenCounter_Includes_SystemPrompt_In_Count()
+    {
+        var counter = new DefaultTokenCounter();
+        var withoutPrompt = counter.CountTokens([new ChatMessage(ChatRole.User, "hi")]);
+        var withPrompt = counter.CountTokens([new ChatMessage(ChatRole.User, "hi")], systemPrompt: "You are helpful.");
+        withPrompt.Should().BeGreaterThan(withoutPrompt);
+    }
+
+    [Fact]
+    public void TokenCounter_Single_Message_Matches_Collection_Count()
+    {
+        var counter = new DefaultTokenCounter();
+        var message = new ChatMessage(ChatRole.User, "Test message content");
+        counter.CountTokens(message).Should().Be(counter.CountTokens([message]));
+    }
+
+    [Fact]
+    public void ContextWindowMonitor_FillRatio_Clamps_At_Zero_When_No_Tokens()
+    {
+        var counter = new DefaultTokenCounter();
+        var monitor = new DefaultContextWindowMonitor(counter);
+
+        var snapshot = monitor.Measure(
+            [],
+            new ContextWindowOptions { MaxTokens = 1000, ReservedForOutput = 100, ReservedForTools = 100 });
+
+        snapshot.CurrentTokenCount.Should().Be(0);
+        snapshot.FillRatio.Should().Be(0.0);
+        snapshot.AvailableTokens.Should().Be(800);
+    }
+
     private sealed class PrefixRecallProvider : ICompactionRecallProvider
     {
         private readonly string _message;

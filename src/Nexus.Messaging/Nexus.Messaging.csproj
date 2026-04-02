@@ -1,6 +1,8 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <RootNamespace>Nexus.Messaging</RootNamespace>
+    <Description>Inter-agent pub/sub messaging, shared state, and dead letter queue.</Description>
+    <PackageTags>nexus;messaging;pubsub;agents</PackageTags>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\Nexus.Core\Nexus.Core.csproj" />

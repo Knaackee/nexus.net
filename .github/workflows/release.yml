@@ -69,7 +69,17 @@ jobs:
             src/Nexus.Telemetry/Nexus.Telemetry.csproj \
             src/Nexus.Hosting.AspNetCore/Nexus.Hosting.AspNetCore.csproj \
             src/Nexus.Workflows.Dsl/Nexus.Workflows.Dsl.csproj \
-            src/Nexus.Testing/Nexus.Testing.csproj; do
+            src/Nexus.Testing/Nexus.Testing.csproj \
+            src/Nexus.AgentLoop/Nexus.AgentLoop.csproj \
+            src/Nexus.Sessions/Nexus.Sessions.csproj \
+            src/Nexus.Compaction/Nexus.Compaction.csproj \
+            src/Nexus.Configuration/Nexus.Configuration.csproj \
+            src/Nexus.CostTracking/Nexus.CostTracking.csproj \
+            src/Nexus.Permissions/Nexus.Permissions.csproj \
+            src/Nexus.Commands/Nexus.Commands.csproj \
+            src/Nexus.Skills/Nexus.Skills.csproj \
+            src/Nexus.Tools.Standard/Nexus.Tools.Standard.csproj \
+            src/Nexus.Defaults/Nexus.Defaults.csproj; do
             dotnet pack "$proj" -c Release --no-build -o artifacts \
               /p:PackageVersion=${{ steps.version.outputs.version }} \
               /p:ContinuousIntegrationBuild=true

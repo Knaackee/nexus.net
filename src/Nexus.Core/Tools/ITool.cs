@@ -4,9 +4,14 @@ using Nexus.Core.Events;
 
 namespace Nexus.Core.Tools;
 
+/// <summary>
+/// Represents a tool that agents can invoke to perform actions or retrieve information.
+/// </summary>
 public interface ITool
 {
+    /// <summary>Unique name identifying this tool.</summary>
     string Name { get; }
+    /// <summary>Human-readable description of what this tool does.</summary>
     string Description { get; }
     ToolAnnotations? Annotations => null;
     JsonElement? InputSchema => null;

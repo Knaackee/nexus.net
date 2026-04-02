@@ -1,6 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <RootNamespace>Nexus.Permissions</RootNamespace>
+    <Description>Tool approval rules and permission policies for Nexus agents.</Description>
+    <PackageTags>nexus;permissions;approval;security</PackageTags>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\Nexus.Core\Nexus.Core.csproj" />

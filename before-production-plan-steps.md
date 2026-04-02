@@ -430,28 +430,28 @@ Empfohlener Kommunikationsrahmen gegenüber dem Consumer:
 ## Checkliste (zum Abhaken)
 
 ### Phase 1 — BLOCKER (heute)
-- [ ] 1.1 `.nexus/` in .gitignore + Artefakte entfernen
-- [ ] 1.2 `release.yml` um 10 Packages erweitern
-- [ ] 1.3 `installation.md` um 10 Packages erweitern
-- [ ] 1.4 README Badge-URL korrigieren
-- [ ] 1.5 README Test-Zahl + Coverage aktualisieren
-- [ ] 1.6 README ChatEditing-Example aufnehmen
+- [x] 1.1 `.nexus/` in .gitignore + Artefakte entfernen
+- [x] 1.2 `release.yml` um 10 Packages erweitern
+- [x] 1.3 `installation.md` um 10 Packages erweitern
+- [x] 1.4 README Badge-URL korrigieren
+- [x] 1.5 README Test-Zahl + Coverage aktualisieren
+- [x] 1.6 README ChatEditing-Example aufnehmen
 
 ### Phase 2 — HOCH (vor/bei Übergabe)
-- [ ] 2.1 CI: Cli.Tests aufnehmen oder dokumentieren
-- [ ] 2.2 CI: .NET 8.0.x entfernen
-- [ ] 2.3 Smoke-Tests: Hosting, Auth, A2A
-- [ ] 2.4 Package-Descriptions in 14 csproj-Dateien
+- [x] 2.1 CI: Cli.Tests aufnehmen
+- [x] 2.2 CI: .NET 8.0.x und 10.0.x beibehalten (per Entscheidung)
+- [x] 2.3 Smoke-Tests: Hosting (5), Auth (12), A2A (10)
+- [x] 2.4 Package-Descriptions in 17 csproj-Dateien
 
 ### Phase 3 — MITTEL (erste Woche)
-- [ ] 3.1 Coverage automatisieren
-- [ ] 3.2 Architektur-Diagramm vervollständigen
-- [ ] 3.3 Schwach getestete Module ausbauen
-- [ ] 3.4 DI-Pattern-Konsistenz
-- [ ] 3.5 Public-API-Surface bereinigen
+- [x] 3.1 Coverage automatisieren (in CI)
+- [x] 3.2 Architektur-Diagramm vervollständigen
+- [x] 3.3 Schwach getestete Module ausbauen (Compaction 4→10, Configuration 3→9, Defaults 3→8, Mcp 3→10)
+- [x] 3.4 DI-Pattern-Konsistenz (Workflows.Dsl NexusBuilder-Extension)
+- [x] 3.5 Public-API-Surface bereinigen (CommandRegistry, SlashCommandDispatcher, JSON-Converter)
 
 ### Phase 4 — NICE-TO-HAVE (laufend)
-- [ ] 4.1 CHANGELOG.md
-- [ ] 4.2 XML-Docs auf Core-Interfaces
-- [ ] 4.3 Quickstart.md mit Inhalt füllen
-- [ ] 4.4 Benchmarks aktualisieren
+- [x] 4.1 CHANGELOG.md
+- [x] 4.2 XML-Docs auf Core-Interfaces (IAgent, ITool, IOrchestrator, IAgentLoop, IGuardrail, ICostTracker, IToolPermissionHandler, NexusBuilder)
+- [x] 4.3 Quickstart.md mit Inhalt füllen
+- [x] 4.4 Benchmarks aktualisieren (fresh run, results in BenchmarkDotNet.Artifacts + README)

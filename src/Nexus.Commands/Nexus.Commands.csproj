@@ -1,4 +1,12 @@
 <Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <Description>Slash command framework for interactive Nexus agent sessions.</Description>
+    <PackageTags>nexus;commands;slash;interactive</PackageTags>
+  </PropertyGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="Nexus.Commands.Tests" />
+    <InternalsVisibleTo Include="Nexus.Cli" />
+  </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Nexus.Core\Nexus.Core.csproj" />
   </ItemGroup>

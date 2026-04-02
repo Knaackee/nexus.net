@@ -31,6 +31,16 @@ dotnet add package Nexus.Core
 | `Nexus.Workflows.Dsl` | JSON/YAML workflow definitions |
 | `Nexus.Hosting.AspNetCore` | ASP.NET Core endpoints (A2A, AG-UI SSE, health) |
 | `Nexus.Testing` | Mock agents, fake clients, event recording |
+| `Nexus.AgentLoop` | Session-aware execution loop for agents |
+| `Nexus.Sessions` | Session persistence and transcript storage |
+| `Nexus.Compaction` | Context window compaction strategies |
+| `Nexus.Configuration` | Hierarchical settings and configuration providers |
+| `Nexus.CostTracking` | Token counting and USD cost tracking |
+| `Nexus.Permissions` | Tool approval rules and permission policies |
+| `Nexus.Commands` | Slash command framework for interactive sessions |
+| `Nexus.Skills` | Skill injection middleware for agent capabilities |
+| `Nexus.Tools.Standard` | Built-in tools (file, shell, grep, web, sub-agent) |
+| `Nexus.Defaults` | Batteries-included convenience wiring |
 
 ### Common Combinations
 

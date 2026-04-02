@@ -39,3 +39,6 @@ TestResults/
 coverage/
 *.coverage
 *.coveragexml
+
+# Runtime session artifacts
+.nexus/

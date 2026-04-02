@@ -13,7 +13,7 @@ public readonly record struct TaskId(Guid Value)
     public override string ToString() => Value.ToString("N")[..8];
 }
 
-public sealed class TaskIdJsonConverter : JsonConverter<TaskId>
+internal sealed class TaskIdJsonConverter : JsonConverter<TaskId>
 {
     public override TaskId Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {

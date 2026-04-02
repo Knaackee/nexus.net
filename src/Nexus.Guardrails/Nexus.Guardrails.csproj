@@ -1,6 +1,8 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <RootNamespace>Nexus.Guardrails</RootNamespace>
+    <Description>PII redaction, prompt injection detection, and secrets scanning guardrails.</Description>
+    <PackageTags>nexus;guardrails;pii;security</PackageTags>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\Nexus.Core\Nexus.Core.csproj" />

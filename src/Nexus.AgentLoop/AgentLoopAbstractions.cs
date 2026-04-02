@@ -5,8 +5,13 @@ using Nexus.Sessions;
 
 namespace Nexus.AgentLoop;
 
+/// <summary>
+/// Session-aware execution loop that drives an agent through multiple turns,
+/// handling tool calls, approvals, compaction, and streaming events.
+/// </summary>
 public interface IAgentLoop
 {
+    /// <summary>Runs the agent loop and streams events as they occur.</summary>
     IAsyncEnumerable<AgentLoopEvent> RunAsync(AgentLoopOptions options, CancellationToken ct = default);
 }
 

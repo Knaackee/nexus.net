@@ -1,6 +1,6 @@
 # Nexus
 
-[![CI](https://github.com/your-org/nexus/actions/workflows/ci.yml/badge.svg)](https://github.com/your-org/nexus/actions/workflows/ci.yml)
+[![CI](https://github.com/Knaackee/nexus.net/actions/workflows/ci.yml/badge.svg)](https://github.com/Knaackee/nexus.net/actions/workflows/ci.yml)
 [![.NET 10](https://img.shields.io/badge/.NET-10.0-blue)](https://dotnet.microsoft.com/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
@@ -26,18 +26,28 @@ Nexus is for teams that want multi-agent systems to behave like engineered softw
 
 ```mermaid
 flowchart TD
+    DEFAULTS[Nexus.Defaults]
     HOST[Nexus.Hosting.AspNetCore]
     PROTOCOLS[Nexus.Protocols.Mcp • Nexus.Protocols.A2A • Nexus.Protocols.AgUi]
     DSL[Nexus.Workflows.Dsl]
     ORCH[Nexus.Orchestration • Nexus.Orchestration.Checkpointing]
+    LOOP[Nexus.AgentLoop • Nexus.Sessions • Nexus.Compaction]
     RUNTIME[Nexus.Memory • Nexus.Messaging • Nexus.Guardrails • Nexus.Permissions • Nexus.CostTracking • Nexus.Telemetry • Nexus.Auth.OAuth2]
+    TOOLS[Nexus.Tools.Standard • Nexus.Commands • Nexus.Skills]
+    CONFIG[Nexus.Configuration]
     CORE[Nexus.Core]
 
+    DEFAULTS --> HOST
+    DEFAULTS --> LOOP
     HOST --> PROTOCOLS
     PROTOCOLS --> ORCH
     DSL --> ORCH
-    ORCH --> RUNTIME
+    ORCH --> LOOP
+    LOOP --> RUNTIME
+    LOOP --> TOOLS
     RUNTIME --> CORE
+    TOOLS --> CORE
+    CONFIG --> CORE
 ```
 
 ## Start Here
@@ -69,6 +79,7 @@ flowchart TD
 - [Chat Session With Memory Example](examples/Nexus.Examples.ChatSessionWithMemory/README.md)
 - [Human-Approved Workflow Example](examples/Nexus.Examples.HumanApprovedWorkflow/README.md)
 - [Parallel Sub-Agents And Workflow Fan-Out Example](examples/Nexus.Examples.ParallelSubAgentsAndWorkflowFanOut/README.md)
+- [Chat Editing With Diff And Revert Example](examples/Nexus.Examples.ChatEditingWithDiffAndRevert/README.md)
 
 ## Guides
 
@@ -138,18 +149,16 @@ flowchart TD
 
 ## Test Coverage And Test Count
 
-- 265 tests passed in the latest full solution run
-- Full-solution line coverage: 76.29% (11,182 of 14,657 lines)
-- Full-solution branch coverage: 58.28% (2,450 of 4,204 branches)
-- The coverage denominator now includes the new runnable recipe projects added to the solution as source-backed assets
+- 389 tests passed in the latest full solution run across 25 test projects
+- Coverage metrics are collected via CI and updated with each release
 
 ## Benchmark Results
 
 - [benchmarks/Nexus.Benchmarks](benchmarks/Nexus.Benchmarks) contains the workflow and sub-agent runtime benchmark suite
 - Latest measured results on the current workstation:
-- CompileWorkflow: 1.961 μs mean, 5.15 KB allocated
-- ExecuteWorkflow: 82.142 μs mean, 39.24 KB allocated
-- RunParallelSubAgents: 3.689 μs mean, 8.2 KB allocated
+- CompileWorkflow: 1.788 μs mean, 5.15 KB allocated
+- ExecuteWorkflow: 92.894 μs mean, 39.17 KB allocated
+- RunParallelSubAgents: 3.670 μs mean, 8.2 KB allocated
 - Full benchmark reports are written to BenchmarkDotNet.Artifacts/results
 
 ## Credits

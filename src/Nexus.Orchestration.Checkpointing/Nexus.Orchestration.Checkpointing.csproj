@@ -1,6 +1,8 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <RootNamespace>Nexus.Orchestration.Checkpointing</RootNamespace>
+    <Description>Snapshot serialization and restore for orchestration state.</Description>
+    <PackageTags>nexus;checkpointing;snapshots;orchestration</PackageTags>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\Nexus.Orchestration\Nexus.Orchestration.csproj" />

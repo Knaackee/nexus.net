@@ -86,7 +86,7 @@ public interface ICommandCatalog
     IReadOnlyList<ICommand> ListAll();
 }
 
-public sealed class CommandRegistry : ICommandCatalog
+internal sealed class CommandRegistry : ICommandCatalog
 {
     private readonly Dictionary<string, ICommand> _commands = new(StringComparer.OrdinalIgnoreCase);
 
@@ -109,7 +109,7 @@ public sealed class CommandRegistry : ICommandCatalog
             .ToArray();
 }
 
-public sealed class SlashCommandDispatcher
+internal sealed class SlashCommandDispatcher
 {
     private readonly ICommandCatalog _commands;
     private readonly string _prefix;

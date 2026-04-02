@@ -3,10 +3,16 @@ using Nexus.Core.Tools;
 
 namespace Nexus.Guardrails;
 
+/// <summary>
+/// Evaluates content against safety rules and returns allow, block, or redact decisions.
+/// </summary>
 public interface IGuardrail
 {
+    /// <summary>Name identifying this guardrail.</summary>
     string Name { get; }
+    /// <summary>Phase in the pipeline where this guardrail applies.</summary>
     GuardrailPhase Phase { get; }
+    /// <summary>Evaluates the given context and returns a guardrail decision.</summary>
     Task<GuardrailResult> EvaluateAsync(GuardrailContext context, CancellationToken ct = default);
 }
 

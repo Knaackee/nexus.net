@@ -1,4 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <Description>Skill injection middleware for Nexus agent capabilities.</Description>
+    <PackageTags>nexus;skills;middleware;agents</PackageTags>
+  </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\Nexus.Core\Nexus.Core.csproj" />
   </ItemGroup>

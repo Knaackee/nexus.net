@@ -1,6 +1,8 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <RootNamespace>Nexus.Memory</RootNamespace>
+    <Description>Conversation history and working memory for Nexus agents.</Description>
+    <PackageTags>nexus;memory;conversation;history</PackageTags>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\Nexus.Compaction\Nexus.Compaction.csproj" />

@@ -5,7 +5,22 @@ namespace Nexus.Workflows.Dsl;
 
 public static class WorkflowDslBuilderExtensions
 {
+    public static NexusBuilder AddWorkflowDsl(
+        this NexusBuilder builder,
+        Action<WorkflowDslBuilder>? configure = null)
+    {
+        builder.Services.AddWorkflowDslServices(configure);
+        return builder;
+    }
+
     public static IServiceCollection AddWorkflowDsl(
+        this IServiceCollection services,
+        Action<WorkflowDslBuilder>? configure = null)
+    {
+        return services.AddWorkflowDslServices(configure);
+    }
+
+    private static IServiceCollection AddWorkflowDslServices(
         this IServiceCollection services,
         Action<WorkflowDslBuilder>? configure = null)
     {

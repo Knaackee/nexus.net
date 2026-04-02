@@ -1,6 +1,8 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <RootNamespace>Nexus.Hosting.AspNetCore</RootNamespace>
+    <Description>ASP.NET Core endpoints for A2A, AG-UI SSE streaming, and health checks.</Description>
+    <PackageTags>nexus;aspnetcore;hosting;endpoints</PackageTags>
   </PropertyGroup>
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />

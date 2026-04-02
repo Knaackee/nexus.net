@@ -6,8 +6,12 @@ using Nexus.Core.Tools;
 
 namespace Nexus.Core.Configuration;
 
+/// <summary>
+/// Fluent builder for configuring Nexus services. Use with <c>services.AddNexus(builder => ...)</c>.
+/// </summary>
 public class NexusBuilder
 {
+    /// <summary>The underlying service collection being configured.</summary>
     public IServiceCollection Services { get; }
 
     public NexusBuilder(IServiceCollection services)
