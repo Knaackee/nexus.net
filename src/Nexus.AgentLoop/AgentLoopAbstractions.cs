@@ -1,5 +1,6 @@
 using Microsoft.Extensions.AI;
 using Nexus.Core.Agents;
+using Nexus.Core.Events;
 using Nexus.Core.Tools;
 using Nexus.Sessions;
 
@@ -56,6 +57,9 @@ public sealed record ToolCallCompletedLoopEvent(SessionId? SessionId, AgentId Ag
     : AgentLoopEvent(SessionId, AgentId, DateTimeOffset.UtcNow);
 
 public sealed record ApprovalRequestedLoopEvent(SessionId? SessionId, AgentId AgentId, string ApprovalId, string Description)
+    : AgentLoopEvent(SessionId, AgentId, DateTimeOffset.UtcNow);
+
+public sealed record UserInputRequestedLoopEvent(SessionId? SessionId, AgentId AgentId, string RequestId, UserInputRequest Request)
     : AgentLoopEvent(SessionId, AgentId, DateTimeOffset.UtcNow);
 
 public sealed record CompactionTriggeredLoopEvent(SessionId? SessionId, AgentId AgentId, string StrategyUsed, int TokensBefore, int TokensAfter)

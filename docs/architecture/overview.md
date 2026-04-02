@@ -30,7 +30,7 @@ The foundation. Defines all abstractions:
 - **Agents** — `IAgent`, `AgentDefinition`, `AgentResult`, `AgentState`, `AgentId`, `AgentTask`
 - **Tools** — `ITool`, `IToolRegistry`, `LambdaTool`, `ToolResult`, `ToolAnnotations`
 - **Pipeline** — `IAgentMiddleware`, `IToolMiddleware` for composable request/response interception
-- **Events** — `AgentEvent` hierarchy for streaming (`TextChunkEvent`, `ToolCallEvent`, `AgentCompletedEvent`, etc.)
+- **Events** — `AgentEvent` hierarchy for streaming (`TextChunkEvent`, `ReasoningChunkEvent`, `ToolCallStartedEvent`, `ApprovalRequestedEvent`, `UserInputRequestedEvent`, `AgentCompletedEvent`, etc.)
 - **Contracts** — Forward-declared interfaces (`IConversationStore`, `IWorkingMemory`, `IMessageBus`) that other packages implement
 - **Configuration** — `NexusBuilder` with fluent sub-builders, `AddNexus` extension method
 

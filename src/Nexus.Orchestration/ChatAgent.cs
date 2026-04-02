@@ -81,24 +81,69 @@ public class ChatAgent : IAgent
         {
             yield return new AgentIterationEvent(Id, iteration + 1, _options.MaxIterations);
 
-            // Stream response and collect all content (text + function calls)
+            // Stream response and collect all content (text, reasoning, and tool calls)
             var responseText = new StringBuilder();
+            var assistantContents = new List<AIContent>();
             var functionCalls = new List<FunctionCallContent>();
+            var toolCallAssistantIndexes = new Dictionary<string, int>(StringComparer.Ordinal);
+            var toolCallIndexes = new Dictionary<string, int>(StringComparer.Ordinal);
             var usage = UsageTotals.Empty;
             decimal? estimatedCost = null;
 
             await foreach (var update in _client.GetStreamingResponseAsync(messages, chatOptions, ct))
             {
-                if (update.Text is { Length: > 0 } text)
+                var handledStructuredContent = false;
+
+                if (update.Contents is { Count: > 0 })
                 {
-                    responseText.Append(text);
-                    yield return new TextChunkEvent(Id, text);
+                    handledStructuredContent = true;
+                    foreach (var content in update.Contents)
+                    {
+                        switch (content)
+                        {
+                            case TextReasoningContent reasoning:
+                                AppendOrMergeAssistantContent(assistantContents, reasoning);
+                                yield return new ReasoningChunkEvent(Id, reasoning.Text);
+                                break;
+
+                            case TextContent textContent:
+                                responseText.Append(textContent.Text);
+                                AppendOrMergeAssistantContent(assistantContents, textContent);
+                                yield return new TextChunkEvent(Id, textContent.Text);
+                                break;
+
+                            case FunctionCallContent functionCall:
+                                var inputJson = SerializeFunctionArguments(functionCall);
+                                var callId = GetToolCallKey(functionCall, functionCalls.Count);
+                                var isNewFunctionCall = UpsertFunctionCall(
+                                    assistantContents,
+                                    functionCalls,
+                                    toolCallAssistantIndexes,
+                                    toolCallIndexes,
+                                    callId,
+                                    functionCall);
+
+                                if (isNewFunctionCall)
+                                {
+                                    yield return new ToolCallStartedEvent(Id, callId, functionCall.Name, inputJson);
+
+                                    if (TryCreateUserInputRequest(functionCall, inputJson, out var request))
+                                        yield return new UserInputRequestedEvent(Id, callId, request);
+                                }
+                                break;
+
+                            default:
+                                assistantContents.Add(content);
+                                break;
+                        }
+                    }
                 }
 
-                foreach (var content in update.Contents)
+                if (!handledStructuredContent && update.Text is { Length: > 0 } text)
                 {
-                    if (content is FunctionCallContent fc)
-                        functionCalls.Add(fc);
+                    responseText.Append(text);
+                    AppendOrMergeAssistantContent(assistantContents, new TextContent(text));
+                    yield return new TextChunkEvent(Id, text);
                 }
 
                 usage = usage.Merge(ReadUsage(update));
@@ -108,11 +153,6 @@ public class ChatAgent : IAgent
             if (usage.HasValues || estimatedCost.HasValue)
                 yield return new TokenUsageEvent(Id, usage.InputTokens, usage.OutputTokens, estimatedCost);
 
-            // Build assistant message from streamed content
-            var assistantContents = new List<AIContent>();
-            if (responseText.Length > 0)
-                assistantContents.Add(new TextContent(responseText.ToString()));
-            assistantContents.AddRange(functionCalls);
             messages.Add(new ChatMessage(ChatRole.Assistant, assistantContents));
 
             if (functionCalls.Count == 0)
@@ -120,7 +160,7 @@ public class ChatAgent : IAgent
                 var tokenUsage = usage.HasValues
                     ? new TokenUsageSummary(usage.InputTokens, usage.OutputTokens, usage.TotalTokens)
                     : null;
-                var result = AgentResult.Success(responseText.ToString(), tokenUsage, estimatedCost);
+                var result = AgentResult.Success(responseText.ToString(), tokenUsage, estimatedCost, assistantContents.ToArray());
                 _state = AgentState.Completed;
                 yield return new AgentStateChangedEvent(Id, AgentState.Running, AgentState.Completed);
                 yield return new AgentCompletedEvent(Id, result);
@@ -137,8 +177,6 @@ public class ChatAgent : IAgent
                 var inputJson = fc.Arguments is not null
                     ? JsonSerializer.SerializeToElement(fc.Arguments)
                     : JsonDocument.Parse("{}").RootElement;
-
-                yield return new ToolCallStartedEvent(Id, callId, fc.Name, inputJson);
 
                 var tool = context.Tools.Resolve(fc.Name);
                 if (tool is null)
@@ -275,6 +313,139 @@ public class ChatAgent : IAgent
             if (property is not null)
                 return property.GetValue(source);
         }
+
+        return null;
+    }
+
+    private static void AppendOrMergeAssistantContent(List<AIContent> assistantContents, AIContent content)
+    {
+        switch (content)
+        {
+            case TextContent textContent:
+                if (assistantContents.Count > 0 && assistantContents[^1] is TextContent existingText)
+                {
+                    assistantContents[^1] = new TextContent(existingText.Text + textContent.Text);
+                }
+                else
+                {
+                    assistantContents.Add(new TextContent(textContent.Text));
+                }
+
+                break;
+
+            case TextReasoningContent reasoningContent:
+                if (assistantContents.Count > 0 && assistantContents[^1] is TextReasoningContent existingReasoning)
+                {
+                    assistantContents[^1] = new TextReasoningContent(existingReasoning.Text + reasoningContent.Text);
+                }
+                else
+                {
+                    assistantContents.Add(new TextReasoningContent(reasoningContent.Text));
+                }
+
+                break;
+
+            default:
+                assistantContents.Add(content);
+                break;
+        }
+    }
+
+    private static bool UpsertFunctionCall(
+        List<AIContent> assistantContents,
+        List<FunctionCallContent> functionCalls,
+        Dictionary<string, int> toolCallAssistantIndexes,
+        Dictionary<string, int> toolCallIndexes,
+        string callId,
+        FunctionCallContent functionCall)
+    {
+        if (toolCallAssistantIndexes.TryGetValue(callId, out var assistantIndex))
+        {
+            assistantContents[assistantIndex] = functionCall;
+            functionCalls[toolCallIndexes[callId]] = functionCall;
+            return false;
+        }
+
+        toolCallAssistantIndexes[callId] = assistantContents.Count;
+        toolCallIndexes[callId] = functionCalls.Count;
+        assistantContents.Add(functionCall);
+        functionCalls.Add(functionCall);
+        return true;
+    }
+
+    private static string GetToolCallKey(FunctionCallContent functionCall, int fallbackIndex)
+        => !string.IsNullOrWhiteSpace(functionCall.CallId)
+            ? functionCall.CallId
+            : $"{functionCall.Name}:{fallbackIndex}";
+
+    private static JsonElement SerializeFunctionArguments(FunctionCallContent functionCall)
+        => functionCall.Arguments is not null
+            ? JsonSerializer.SerializeToElement(functionCall.Arguments)
+            : JsonDocument.Parse("{}").RootElement;
+
+    private static bool TryCreateUserInputRequest(
+        FunctionCallContent functionCall,
+        JsonElement inputJson,
+        out UserInputRequest request)
+    {
+        if (!string.Equals(functionCall.Name, "ask_user", StringComparison.OrdinalIgnoreCase))
+        {
+            request = default!;
+            return false;
+        }
+
+        request = new UserInputRequest(
+            InputType: ReadOptionalString(inputJson, "type") ?? "freeText",
+            Question: ReadOptionalString(inputJson, "question") ?? string.Empty,
+            Options: ReadOptionalStringArray(inputJson, "options"),
+            Placeholder: ReadOptionalString(inputJson, "placeholder"),
+            IsOptional: ReadOptionalBool(inputJson, "isOptional") ?? false,
+            TimeoutSeconds: ReadOptionalInt(inputJson, "timeoutSeconds"),
+            Reason: ReadOptionalString(inputJson, "reason"));
+        return true;
+    }
+
+    private static string? ReadOptionalString(JsonElement element, string propertyName)
+    {
+        if (!element.TryGetProperty(propertyName, out var property) || property.ValueKind != JsonValueKind.String)
+            return null;
+
+        return property.GetString();
+    }
+
+    private static string[] ReadOptionalStringArray(JsonElement element, string propertyName)
+    {
+        if (!element.TryGetProperty(propertyName, out var property) || property.ValueKind != JsonValueKind.Array)
+            return [];
+
+        return property.EnumerateArray()
+            .Where(item => item.ValueKind == JsonValueKind.String)
+            .Select(item => item.GetString())
+            .Where(item => !string.IsNullOrWhiteSpace(item))
+            .Cast<string>()
+            .ToArray();
+    }
+
+    private static bool? ReadOptionalBool(JsonElement element, string propertyName)
+    {
+        if (!element.TryGetProperty(propertyName, out var property))
+            return null;
+
+        return property.ValueKind switch
+        {
+            JsonValueKind.True => true,
+            JsonValueKind.False => false,
+            _ => null,
+        };
+    }
+
+    private static int? ReadOptionalInt(JsonElement element, string propertyName)
+    {
+        if (!element.TryGetProperty(propertyName, out var property))
+            return null;
+
+        if (property.ValueKind == JsonValueKind.Number && property.TryGetInt32(out var value))
+            return value;
 
         return null;
     }

@@ -4,6 +4,20 @@ All notable changes to Nexus will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Added
+
+- Structured Priority-1 streaming support for reasoning, tool-use, approval requests, and ask-user interaction requests across agent events, AG-UI, and session transcripts
+- New AG-UI event shapes for reasoning chunks, approval requests, and structured user input requests
+- New testing helpers in `FakeChatClient` for reasoning-aware streaming responses
+
+### Changed
+
+- `ChatAgent` now preserves structured assistant contents instead of rebuilding final turns from plain text alone
+- `FileSessionStore` now persists structured chat contents in addition to text for backwards-compatible transcript roundtrips
+- Updated example and docs to show structured streaming behavior for tool use and reasoning
+
 ## [0.2.1] — 2026-04-02
 
 ### Fixed

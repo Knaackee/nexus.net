@@ -53,6 +53,65 @@ public sealed class AgentLoopTests
     }
 
     [Fact]
+    public async Task RunAsync_Persists_Structured_Assistant_Contents()
+    {
+        var client = new FakeChatClient().WithReasoningResponse("Trace the steps.", "Done");
+        using var services = BuildServices(client);
+        var loop = services.GetRequiredService<IAgentLoop>();
+        var sessionStore = services.GetRequiredService<InMemorySessionStore>();
+
+        await DrainAsync(loop.RunAsync(new AgentLoopOptions
+        {
+            AgentDefinition = new AgentDefinition { Name = "assistant" },
+            UserInput = "Think first",
+            SessionTitle = "structured-session",
+        }));
+
+        var session = await FirstSessionAsync(sessionStore);
+        session.Should().NotBeNull();
+
+        var transcript = new List<ChatMessage>();
+        await foreach (var message in sessionStore.ReadAsync(session!.Id))
+            transcript.Add(message);
+
+        var assistant = transcript.Last(message => message.Role == ChatRole.Assistant);
+        assistant.Contents.Select(content => content.GetType()).Should().ContainInOrder(
+            typeof(TextReasoningContent),
+            typeof(TextContent));
+        assistant.Text.Should().Be("Done");
+    }
+
+    [Fact]
+    public async Task RunAsync_Emits_UserInputRequestedLoopEvent_For_AskUser_ToolCall()
+    {
+        var client = new FakeChatClient()
+            .WithFunctionCallResponse(new FunctionCallContent("ask-1", "ask_user", new Dictionary<string, object?>
+            {
+                ["question"] = "Ship it?",
+                ["type"] = "confirm"
+            }))
+            .WithResponse("User approved");
+        using var services = BuildServices(client);
+        services.GetRequiredService<IToolRegistry>().Register(MockTool.AlwaysReturns("ask_user", "yes"));
+        var loop = services.GetRequiredService<IAgentLoop>();
+
+        var events = new List<AgentLoopEvent>();
+        await foreach (var evt in loop.RunAsync(new AgentLoopOptions
+        {
+            AgentDefinition = new AgentDefinition { Name = "assistant", ToolNames = ["ask_user"] },
+            UserInput = "Ask before shipping",
+        }))
+        {
+            events.Add(evt);
+        }
+
+        var request = events.OfType<UserInputRequestedLoopEvent>().Single();
+        request.RequestId.Should().Be("ask-1");
+        request.Request.Question.Should().Be("Ship it?");
+        request.Request.InputType.Should().Be("confirm");
+    }
+
+    [Fact]
     public async Task RunAsync_ResumeLastSession_Reuses_Transcript_History()
     {
         var client = new FakeChatClient("first answer", "second answer");

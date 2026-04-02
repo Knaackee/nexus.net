@@ -47,6 +47,7 @@ Notable events:
 - `ToolCallProgressLoopEvent`
 - `ToolCallCompletedLoopEvent`
 - `ApprovalRequestedLoopEvent`
+- `UserInputRequestedLoopEvent`
 - `CompactionTriggeredLoopEvent`
 - `TokenUsageLoopEvent`
 - `TurnCompletedLoopEvent`

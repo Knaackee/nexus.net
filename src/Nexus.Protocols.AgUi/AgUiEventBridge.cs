@@ -68,6 +68,10 @@ public sealed class AgUiEventBridge
                 yield return new AgUiTextChunkEvent(textChunk.Text);
                 break;
 
+            case ReasoningChunkEvent reasoningChunk:
+                yield return new AgUiReasoningChunkEvent(reasoningChunk.Text);
+                break;
+
             case ToolCallStartedEvent toolStart:
                 yield return new AgUiToolCallStartEvent(
                     toolStart.ToolCallId,
@@ -80,6 +84,14 @@ public sealed class AgUiEventBridge
                     ? JsonSerializer.SerializeToElement(toolComplete.Result)
                     : JsonSerializer.SerializeToElement<object?>(null);
                 yield return new AgUiToolCallEndEvent(toolComplete.ToolCallId, resultJson);
+                break;
+
+            case ApprovalRequestedEvent approvalRequested:
+                yield return new AgUiApprovalRequestedEvent(approvalRequested.ApprovalId, approvalRequested.Description);
+                break;
+
+            case UserInputRequestedEvent userInputRequested:
+                yield return new AgUiUserInputRequestEvent(userInputRequested.RequestId, userInputRequested.Request);
                 break;
         }
     }

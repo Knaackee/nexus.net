@@ -17,6 +17,15 @@ public record TextChunkEvent(AgentId AgentId, string Text)
 public record ReasoningChunkEvent(AgentId AgentId, string Text)
     : AgentEvent(AgentId, DateTimeOffset.UtcNow);
 
+public record UserInputRequest(
+    string InputType,
+    string Question,
+    IReadOnlyList<string> Options,
+    string? Placeholder,
+    bool IsOptional,
+    int? TimeoutSeconds,
+    string? Reason);
+
 // Tool Lifecycle
 public record ToolCallStartedEvent(AgentId AgentId, string ToolCallId, string ToolName, JsonElement Arguments)
     : AgentEvent(AgentId, DateTimeOffset.UtcNow);
@@ -36,6 +45,9 @@ public record AgentIterationEvent(AgentId AgentId, int Iteration, int MaxIterati
 
 // Human-in-the-Loop
 public record ApprovalRequestedEvent(AgentId AgentId, string ApprovalId, string Description)
+    : AgentEvent(AgentId, DateTimeOffset.UtcNow);
+
+public record UserInputRequestedEvent(AgentId AgentId, string RequestId, UserInputRequest Request)
     : AgentEvent(AgentId, DateTimeOffset.UtcNow);
 
 // Sub-Agents

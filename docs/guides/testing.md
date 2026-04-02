@@ -17,6 +17,9 @@ var client = new FakeChatClient()
     .WithResponse("First response")
     .WithResponse("Second response")
     .WithStreamingResponse("chunk1", "chunk2", "chunk3");
+
+var structuredClient = new FakeChatClient()
+    .WithReasoningResponse("Need to inspect inputs first.", "Here is the final answer.");
 ```
 
 ### Verifying Calls
@@ -44,6 +47,9 @@ await foreach (var update in client.GetStreamingResponseAsync(messages))
     Console.Write(update.Text);
 }
 // Output: "The answer is 42."
+
+var reasoningClient = new FakeChatClient()
+    .WithReasoningResponse("Check prerequisites.", "Ship it.");
 ```
 
 ## MockAgent

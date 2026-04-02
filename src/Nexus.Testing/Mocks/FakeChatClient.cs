@@ -39,6 +39,36 @@ public sealed class FakeChatClient : IChatClient
         return this;
     }
 
+    public FakeChatClient WithStreamingUpdates(IEnumerable<ChatResponseUpdate> updates, ChatMessage? finalMessage = null)
+    {
+        var materialized = updates.ToList();
+        _streamingResponses.Enqueue(materialized);
+        _responses.Enqueue(new ChatResponse(finalMessage ?? new ChatMessage(ChatRole.Assistant, string.Empty)));
+        return this;
+    }
+
+    public FakeChatClient WithReasoningResponse(string reasoning, string text)
+    {
+        return WithStreamingUpdates(
+        [
+            new ChatResponseUpdate
+            {
+                Role = ChatRole.Assistant,
+                Contents = [new TextReasoningContent(reasoning)]
+            },
+            new ChatResponseUpdate
+            {
+                Role = ChatRole.Assistant,
+                Contents = [new TextContent(text)]
+            }
+        ],
+        new ChatMessage(ChatRole.Assistant,
+        [
+            new TextReasoningContent(reasoning),
+            new TextContent(text)
+        ]));
+    }
+
     public FakeChatClient WithFunctionCallResponse(params FunctionCallContent[] functionCalls)
     {
         var update = new ChatResponseUpdate

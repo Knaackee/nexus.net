@@ -2,7 +2,7 @@
 
 `Nexus.Protocols.AgUi` bridges Nexus runtime events into AG-UI frontend events.
 
-Use it when a frontend needs a stable event stream for transcripts, tool activity, step progress, and final run completion.
+Use it when a frontend needs a stable event stream for transcripts, reasoning, tool activity, user interaction requests, step progress, and final run completion.
 
 ## Key Types
 
@@ -15,8 +15,11 @@ Base record for all AG-UI events.
 - `AgUiRunStartedEvent`
 - `AgUiRunFinishedEvent`
 - `AgUiTextChunkEvent`
+- `AgUiReasoningChunkEvent`
 - `AgUiToolCallStartEvent`
 - `AgUiToolCallEndEvent`
+- `AgUiApprovalRequestedEvent`
+- `AgUiUserInputRequestEvent`
 - `AgUiStateDeltaEvent`
 - `AgUiStateSnapshotEvent`
 - `AgUiStepStartedEvent`
@@ -44,6 +47,8 @@ public sealed class AgUiEventBridge
 ## When To Use It
 
 - a browser UI should display live agent output and tool activity
+- a browser UI should render reasoning separately from final answer text
+- a browser UI should react to approval requests and ask-user prompts as structured events
 - orchestration events need a frontend-friendly event contract
 - SSE-based progressive rendering is part of the UX
 

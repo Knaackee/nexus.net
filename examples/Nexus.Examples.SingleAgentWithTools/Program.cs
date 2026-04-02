@@ -3,6 +3,7 @@ using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Nexus.Core.Agents;
 using Nexus.Core.Configuration;
+using Nexus.Core.Events;
 using Nexus.Core.Tools;
 using Nexus.Orchestration;
 using Nexus.Permissions;
@@ -37,13 +38,30 @@ var agent = await pool.SpawnAsync(new AgentDefinition
     ToolNames = ["get_time"],
 });
 
-var result = await orchestrator.ExecuteSequenceAsync([
-    AgentTask.Create("What time is it right now?") with { AssignedAgent = agent.Id }
-]);
+string? finalText = null;
 
-Console.WriteLine($"Status: {result.Status}");
-foreach (var (_, taskResult) in result.TaskResults)
-    Console.WriteLine(taskResult.Text);
+await foreach (var evt in orchestrator.ExecuteSequenceStreamingAsync([
+    AgentTask.Create("What time is it right now?") with { AssignedAgent = agent.Id }
+]))
+{
+    switch (evt)
+    {
+        case AgentEventInGraph { InnerEvent: ToolCallStartedEvent toolStart }:
+            Console.WriteLine($"Tool call started: {toolStart.ToolName}");
+            break;
+
+        case AgentEventInGraph { InnerEvent: TextChunkEvent textChunk }:
+            Console.Write(textChunk.Text);
+            break;
+
+        case NodeCompletedEvent completed:
+            finalText = completed.Result.Text;
+            break;
+    }
+}
+
+Console.WriteLine();
+Console.WriteLine($"Final answer: {finalText}");
 
 sealed class ToolCallingChatClient : IChatClient
 {

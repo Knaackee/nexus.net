@@ -15,6 +15,8 @@ public sealed class FakeChatClient : IChatClient
     // Fluent configuration
     public FakeChatClient WithResponse(string text);
     public FakeChatClient WithStreamingResponse(params string[] chunks);
+    public FakeChatClient WithStreamingUpdates(IEnumerable<ChatResponseUpdate> updates, ChatMessage? finalMessage = null);
+    public FakeChatClient WithReasoningResponse(string reasoning, string text);
 
     // Verification
     public List<IList<ChatMessage>> ReceivedMessages { get; }

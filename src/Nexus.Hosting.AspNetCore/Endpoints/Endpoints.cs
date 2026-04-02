@@ -1,6 +1,7 @@
 using System.Runtime.CompilerServices;
 using System.Text.Json;
 using Microsoft.AspNetCore.Http;
+using Nexus.Core.Events;
 using Nexus.Orchestration;
 using Nexus.Protocols.AgUi;
 
@@ -72,11 +73,15 @@ public static class A2AEndpoint
 }
 
 [System.Text.Json.Serialization.JsonSerializable(typeof(AgUiEvent))]
+[System.Text.Json.Serialization.JsonSerializable(typeof(UserInputRequest))]
 [System.Text.Json.Serialization.JsonDerivedType(typeof(AgUiRunStartedEvent), "runStarted")]
 [System.Text.Json.Serialization.JsonDerivedType(typeof(AgUiRunFinishedEvent), "runFinished")]
 [System.Text.Json.Serialization.JsonDerivedType(typeof(AgUiTextChunkEvent), "textChunk")]
+[System.Text.Json.Serialization.JsonDerivedType(typeof(AgUiReasoningChunkEvent), "reasoningChunk")]
 [System.Text.Json.Serialization.JsonDerivedType(typeof(AgUiToolCallStartEvent), "toolCallStart")]
 [System.Text.Json.Serialization.JsonDerivedType(typeof(AgUiToolCallEndEvent), "toolCallEnd")]
+[System.Text.Json.Serialization.JsonDerivedType(typeof(AgUiApprovalRequestedEvent), "approvalRequested")]
+[System.Text.Json.Serialization.JsonDerivedType(typeof(AgUiUserInputRequestEvent), "userInputRequest")]
 [System.Text.Json.Serialization.JsonDerivedType(typeof(AgUiStateDeltaEvent), "stateDelta")]
 [System.Text.Json.Serialization.JsonDerivedType(typeof(AgUiStateSnapshotEvent), "stateSnapshot")]
 [System.Text.Json.Serialization.JsonDerivedType(typeof(AgUiStepStartedEvent), "stepStarted")]

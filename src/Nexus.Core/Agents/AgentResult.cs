@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Microsoft.Extensions.AI;
 
 namespace Nexus.Core.Agents;
 
@@ -6,6 +7,7 @@ public record AgentResult
 {
     public required AgentResultStatus Status { get; init; }
     public string? Text { get; init; }
+    public IReadOnlyList<AIContent>? Contents { get; init; }
     public JsonElement? StructuredOutput { get; init; }
     public IReadOnlyDictionary<string, object> Metadata { get; init; } = new Dictionary<string, object>();
     public TokenUsageSummary? TokenUsage { get; init; }
@@ -14,10 +16,12 @@ public record AgentResult
     public static AgentResult Success(
         string text,
         TokenUsageSummary? tokenUsage = null,
-        decimal? estimatedCost = null) => new()
+        decimal? estimatedCost = null,
+        IReadOnlyList<AIContent>? contents = null) => new()
     {
         Status = AgentResultStatus.Success,
         Text = text,
+        Contents = contents,
         TokenUsage = tokenUsage,
         EstimatedCost = estimatedCost,
     };

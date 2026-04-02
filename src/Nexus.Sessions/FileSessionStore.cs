@@ -271,13 +271,18 @@ public sealed class FileSessionStore : ISessionStore, ISessionTranscript, IDispo
         return query;
     }
 
-    private sealed record PersistedChatMessage(string Role, string? Text)
+    private sealed record PersistedChatMessage(string Role, string? Text, List<AIContent>? Contents)
     {
         public static PersistedChatMessage From(ChatMessage message)
-            => new(message.Role.Value, message.Text);
+            => new(
+                message.Role.Value,
+                message.Text,
+                message.Contents.Count > 0 ? message.Contents.ToList() : null);
 
         public ChatMessage ToChatMessage()
-            => new(ParseRole(Role), Text ?? string.Empty);
+            => Contents is { Count: > 0 }
+                ? new ChatMessage(ParseRole(Role), Contents)
+                : new ChatMessage(ParseRole(Role), Text ?? string.Empty);
 
         private static ChatRole ParseRole(string role)
             => role.ToLowerInvariant() switch

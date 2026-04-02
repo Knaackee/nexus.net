@@ -121,6 +121,29 @@ public sealed class FileSessionStoreTests : IDisposable
     }
 
     [Fact]
+    public async Task FileStore_RoundTrips_Structured_Assistant_Contents()
+    {
+        var store = new FileSessionStore(_baseDirectory);
+        var session = await store.CreateAsync(new SessionCreateOptions { Title = "structured" });
+
+        await store.AppendAsync(session.Id, new ChatMessage(ChatRole.Assistant,
+        [
+            new TextReasoningContent("Check prerequisites."),
+            new TextContent("All clear.")
+        ]));
+
+        var transcript = new List<ChatMessage>();
+        await foreach (var message in store.ReadAsync(session.Id))
+            transcript.Add(message);
+
+        transcript.Should().ContainSingle();
+        transcript[0].Contents.Select(content => content.GetType()).Should().ContainInOrder(
+            typeof(TextReasoningContent),
+            typeof(TextContent));
+        transcript[0].Text.Should().Be("All clear.");
+    }
+
+    [Fact]
     public async Task DeleteAsync_ReturnsFalse_For_Missing_Session()
     {
         var store = new FileSessionStore(_baseDirectory);

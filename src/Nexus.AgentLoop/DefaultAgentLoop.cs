@@ -284,6 +284,9 @@ public sealed class DefaultAgentLoop : IAgentLoop
                 case ApprovalRequestedEvent approval:
                     events.Add(new ApprovalRequestedLoopEvent(sessionId, agent.Id, approval.ApprovalId, approval.Description));
                     break;
+                case UserInputRequestedEvent userInputRequested:
+                    events.Add(new UserInputRequestedLoopEvent(sessionId, agent.Id, userInputRequested.RequestId, userInputRequested.Request));
+                    break;
                 case TokenUsageEvent usage:
                     events.Add(new TokenUsageLoopEvent(sessionId, agent.Id, usage.InputTokens, usage.OutputTokens, usage.EstimatedCost));
                     break;
@@ -299,7 +302,14 @@ public sealed class DefaultAgentLoop : IAgentLoop
         }
 
         completedResult ??= AgentResult.Failed("Agent loop completed without a terminal result.");
-        if (!string.IsNullOrWhiteSpace(completedResult.Text))
+        if (completedResult.Contents is { Count: > 0 })
+        {
+            var assistantMessage = new ChatMessage(ChatRole.Assistant, completedResult.Contents.ToList());
+            history.Add(assistantMessage);
+            if (sessionId.HasValue && _sessionTranscript is not null)
+                await _sessionTranscript.AppendAsync(sessionId.Value, assistantMessage, ct).ConfigureAwait(false);
+        }
+        else if (!string.IsNullOrWhiteSpace(completedResult.Text))
         {
             var assistantMessage = new ChatMessage(ChatRole.Assistant, completedResult.Text);
             history.Add(assistantMessage);

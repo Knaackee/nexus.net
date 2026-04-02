@@ -3,8 +3,10 @@ using NSubstitute;
 using Nexus.Hosting.AspNetCore.HealthChecks;
 using Nexus.Orchestration;
 using Nexus.Core.Agents;
+using Nexus.Core.Events;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Http;
+using Nexus.Protocols.AgUi;
 using Xunit;
 
 namespace Nexus.Hosting.AspNetCore.Tests;
@@ -103,5 +105,35 @@ public class A2AEndpointTests
 
         receivedElement.Should().NotBeNull();
         receivedElement!.Value.GetProperty("method").GetString().Should().Be("test");
+    }
+}
+
+public class AgUiEventBridgeTests
+{
+    [Fact]
+    public async Task BridgeAsync_Maps_Reasoning_And_UserInput_Request_Events()
+    {
+        var graphId = TaskGraphId.New();
+        var nodeId = TaskId.New();
+        var agentId = AgentId.New();
+
+        async IAsyncEnumerable<OrchestrationEvent> Stream()
+        {
+            yield return new AgentEventInGraph(graphId, nodeId, new ReasoningChunkEvent(agentId, "Need to inspect the plan."));
+            yield return new AgentEventInGraph(graphId, nodeId, new UserInputRequestedEvent(
+                agentId,
+                "ask-1",
+                new UserInputRequest("confirm", "Proceed?", [], null, false, null, "Need confirmation")));
+        }
+
+        var events = new List<AgUiEvent>();
+        await foreach (var evt in AgUiEventBridge.BridgeAsync(Stream()))
+            events.Add(evt);
+
+        events.OfType<AgUiReasoningChunkEvent>().Should().ContainSingle()
+            .Which.Text.Should().Be("Need to inspect the plan.");
+        events.OfType<AgUiUserInputRequestEvent>().Should().ContainSingle()
+            .Which.RequestId.Should().Be("ask-1");
+        events.OfType<AgUiUserInputRequestEvent>().Single().Request.Question.Should().Be("Proceed?");
     }
 }

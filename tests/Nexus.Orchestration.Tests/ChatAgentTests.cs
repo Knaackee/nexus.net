@@ -7,6 +7,7 @@ using Nexus.Core.Events;
 using Nexus.Core.Tools;
 using Nexus.Testing.Mocks;
 using System.Reflection;
+using System.Text.Json;
 
 namespace Nexus.Orchestration.Tests;
 
@@ -65,6 +66,29 @@ public class ChatAgentTests
 
         events.OfType<TextChunkEvent>().Select(e => e.Text)
             .Should().ContainInOrder("Hello", " world");
+    }
+
+    [Fact]
+    public async Task ReasoningResponse_StreamsReasoningSeparately_AndPreservesContents()
+    {
+        var client = new FakeChatClient().WithReasoningResponse("Need to reason.", "Final answer");
+        var agent = new ChatAgent("test", client);
+        var context = CreateContext();
+
+        var events = await CollectEvents(
+            agent.ExecuteStreamingAsync(AgentTask.Create("Solve it"), context));
+
+        events.OfType<ReasoningChunkEvent>().Select(e => e.Text)
+            .Should().ContainSingle().Which.Should().Be("Need to reason.");
+        events.OfType<TextChunkEvent>().Select(e => e.Text)
+            .Should().ContainSingle().Which.Should().Be("Final answer");
+
+        var completed = events.OfType<AgentCompletedEvent>().Single().Result;
+        completed.Text.Should().Be("Final answer");
+        completed.Contents.Should().NotBeNull();
+        completed.Contents!.Select(content => content.GetType()).Should().ContainInOrder(
+            typeof(TextReasoningContent),
+            typeof(TextContent));
     }
 
     [Fact]
@@ -145,6 +169,37 @@ public class ChatAgentTests
             .Which.As<ToolCallStartedEvent>().ToolName.Should().Be("read_file");
         events.Should().ContainSingle(e => e is ToolCallCompletedEvent)
             .Which.As<ToolCallCompletedEvent>().Result.IsSuccess.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task AskUserToolCall_EmitsStructuredUserInputRequestedEvent()
+    {
+        var tool = MockTool.AlwaysReturns("ask_user", "yes");
+        var registry = new DefaultToolRegistry();
+        registry.Register(tool);
+
+        var client = new FakeChatClient()
+            .WithFunctionCallResponse(new FunctionCallContent("call-ask", "ask_user", new Dictionary<string, object?>
+            {
+                ["question"] = "Continue with deployment?",
+                ["type"] = "confirm",
+                ["options"] = new List<string> { "yes", "no" },
+                ["reason"] = "Need human confirmation"
+            }))
+            .WithResponse("User confirmed");
+
+        var agent = new ChatAgent("test", client);
+        var context = CreateContext(tools: registry);
+
+        var events = await CollectEvents(
+            agent.ExecuteStreamingAsync(AgentTask.Create("Ask the user"), context));
+
+        var request = events.OfType<UserInputRequestedEvent>().Single();
+        request.RequestId.Should().Be("call-ask");
+        request.Request.InputType.Should().Be("confirm");
+        request.Request.Question.Should().Be("Continue with deployment?");
+        request.Request.Options.Should().ContainInOrder("yes", "no");
+        request.Request.Reason.Should().Be("Need human confirmation");
     }
 
     [Fact]
