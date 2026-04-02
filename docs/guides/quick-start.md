@@ -4,12 +4,25 @@ Build a working Nexus agent in a few minutes.
 
 This guide takes you from service registration to a running task with tools, budgets, and cost tracking.
 
+## Use This Guide When
+
+Use this guide if you want the smallest real Nexus setup without sessions, workflow DSL, or protocol hosting.
+
+If your first requirement is multi-turn chat, start with [Chat Session With Memory](../recipes/chat-session-with-memory.md). If your first requirement is explicit workflow structure, start with [Workflows DSL](workflows-dsl.md).
+
 ## What You Build
 
 - one agent
 - one tool registry
 - one orchestrator run
 - optional permissions and cost tracking
+
+## What You Do Not Build Yet
+
+- durable sessions
+- context compaction
+- workflow graphs from JSON or YAML
+- remote protocol exposure
 
 ## 1. Register Nexus
 
@@ -103,4 +116,5 @@ Console.WriteLine($"Estimated USD: ${costs.TotalCost:F6}");
 - Need workflow graphs: [Workflows DSL](workflows-dsl.md)
 - Need child delegation: [Sub-Agents](sub-agents.md)
 - Need approvals: [Permissions](permissions.md)
+- Need multi-turn continuity: [Chat Session With Memory](../recipes/chat-session-with-memory.md)
 - Need runnable scenario setups: [Examples Index](../../examples/README.md)

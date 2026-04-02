@@ -4,6 +4,8 @@ Complete documentation for the Nexus Multi-Agent Orchestration Engine.
 
 ## Contents
 
+- [Package Index](api/README.md) — Canonical map from `src` packages to documentation homes
+
 ### Getting Started
 
 - [Installation](getting-started/installation.md) — NuGet packages and project setup
@@ -64,15 +66,31 @@ Complete documentation for the Nexus Multi-Agent Orchestration Engine.
 
 ### API Reference
 
+- [Package Index](api/README.md) — Canonical map for all `src` packages
 - [Nexus.Core](api/nexus-core.md) — Core abstractions and contracts
+- [Nexus.AgentLoop](api/nexus-agent-loop.md) — Multi-turn execution loop with sessions, tools, approvals, and compaction
+- [Nexus.Auth.OAuth2](api/nexus-auth-oauth2.md) — OAuth2 client credentials and API-key auth helpers
+- [Nexus.Commands](api/nexus-commands.md) — Slash-command framework for interactive hosts
+- [Nexus.Compaction](api/nexus-compaction.md) — Context-window measurement, compaction, and recall
+- [Nexus.Configuration](api/nexus-configuration.md) — Layered settings loading and effective-value resolution
+- [Nexus.Defaults](api/nexus-defaults.md) — Opinionated composition for the common Nexus stack
+- [Nexus.Hosting.AspNetCore](api/nexus-hosting-aspnetcore.md) — ASP.NET Core endpoints and health checks
 - [Nexus.Orchestration](api/nexus-orchestration.md) — Orchestrator, agent pool, task graphs
+- [Nexus.Orchestration.Checkpointing](api/nexus-orchestration-checkpointing.md) — Snapshot persistence and resume support
 - [Nexus.Memory](api/nexus-memory.md) — Conversation store and working memory
 - [Nexus.Guardrails](api/nexus-guardrails.md) — Guardrail pipeline and built-in guards
 - [Nexus.Permissions](api/nexus-permissions.md) — Rule-based tool approval and prompts
 - [Nexus.CostTracking](api/nexus-cost-tracking.md) — Cost tracker, pricing provider, chat client wrapper
 - [Nexus.Messaging](api/nexus-messaging.md) — Message bus and shared state
+- [Nexus.Sessions](api/nexus-sessions.md) — Session metadata and transcript persistence
+- [Nexus.Skills](api/nexus-skills.md) — Skill catalog, directory loading, and injection
+- [Nexus.Telemetry](api/nexus-telemetry.md) — OpenTelemetry tracing and metrics surface
+- [Nexus.Tools.Standard](api/nexus-tools-standard.md) — Standard filesystem, search, shell, web, interaction, and sub-agent tools
 - [Nexus.Workflows.Dsl](api/nexus-workflows-dsl.md) — Workflow loader, validator, serializer
-- [Nexus.Protocols](api/nexus-protocols.md) — MCP, A2A, AG-UI adapters
+- [Nexus.Protocols](api/nexus-protocols.md) — Protocol overview and package routing
+- [Nexus.Protocols.Mcp](api/nexus-protocols-mcp.md) — MCP server integration and discovery surface
+- [Nexus.Protocols.A2A](api/nexus-protocols-a2a.md) — Agent-to-agent request, streaming, and cancellation types
+- [Nexus.Protocols.AgUi](api/nexus-protocols-agui.md) — Frontend event bridge for AG-UI streams
 - [Nexus.Testing](api/nexus-testing.md) — Test utilities and mocks
 
 ### Examples

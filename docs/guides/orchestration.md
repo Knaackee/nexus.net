@@ -2,6 +2,21 @@
 
 The orchestration layer coordinates multi-agent execution with four modes: graph, sequence, parallel, and hierarchical.
 
+## Use This Guide When
+
+Use orchestration when the work structure is the main concern.
+
+If the main concern is turn-by-turn chat behavior, approvals inside a loop, or session continuity, start with `Nexus.AgentLoop` instead.
+
+## Quick Mode Chooser
+
+| If you need... | Use |
+|---|---|
+| one task after another | `ExecuteSequenceAsync` |
+| independent tasks at the same time | `ExecuteParallelAsync` |
+| explicit dependencies and branches | `ExecuteGraphAsync` |
+| manager-worker delegation | `ExecuteHierarchicalAsync` |
+
 ## IOrchestrator
 
 ```csharp
@@ -252,3 +267,9 @@ await foreach (var evt in orchestrator.ExecuteGraphStreamingAsync(graph))
     }
 }
 ```
+
+## Read Next
+
+- declarative workflow files: [Workflows DSL](workflows-dsl.md)
+- loop-driven staged execution: [Human-Approved Workflow](../recipes/human-approved-workflow.md)
+- recovery and resume: [Checkpointing](checkpointing.md)

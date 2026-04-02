@@ -2,6 +2,13 @@
 
 Use this when one coordinator should split work immediately, but you still want a deterministic workflow stage after the fan-out.
 
+## Not A Good Fit
+
+Do not start here if either layer is unnecessary:
+
+- if all work can remain in one agent, use a simpler single-agent setup
+- if the whole flow is already an explicit graph, use orchestration or workflow DSL directly
+
 ## Source-Backed Asset
 
 - runnable example: [../../examples/Nexus.Examples.ParallelSubAgentsAndWorkflowFanOut/README.md](../../examples/Nexus.Examples.ParallelSubAgentsAndWorkflowFanOut/README.md)
@@ -121,3 +128,8 @@ var result = await executor.ExecuteAsync(await workflow);
 - [Sub-Agents](../guides/sub-agents.md)
 - [Workflows DSL](../guides/workflows-dsl.md)
 - [Human-Approved Workflow](human-approved-workflow.md)
+
+## Read Next
+
+- package details: [Nexus.Tools.Standard](../api/nexus-tools-standard.md)
+- package details: [Nexus.Workflows.Dsl](../api/nexus-workflows-dsl.md)

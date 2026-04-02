@@ -2,6 +2,10 @@
 
 Use this when your application is not just a one-shot task runner, but an ongoing session that needs continuity.
 
+## Not A Good Fit
+
+Do not start here if the task is single-shot and stateless. Sessions, transcripts, and compaction add operational surface that you should only carry when continuity is real.
+
 ## Source-Backed Asset
 
 - runnable example: [../../examples/Nexus.Examples.ChatSessionWithMemory/README.md](../../examples/Nexus.Examples.ChatSessionWithMemory/README.md)
@@ -91,3 +95,8 @@ If the session needs explicit stages such as research, plan, execute, and review
 - [Memory & Context](../guides/memory.md)
 - [Checkpointing](../guides/checkpointing.md)
 - [External Brain & Task System](../guides/external-brain-task-system.md)
+
+## Read Next
+
+- staged flow on top of a loop: [Human-Approved Workflow](human-approved-workflow.md)
+- package details: [Nexus.AgentLoop](../api/nexus-agent-loop.md)

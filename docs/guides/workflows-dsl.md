@@ -2,6 +2,12 @@
 
 Define agent orchestration pipelines declaratively in JSON or YAML.
 
+## Use This Guide When
+
+Use the DSL when workflow structure should be reviewed, stored, loaded, validated, or changed without recompiling application code.
+
+If your workflow is tiny and fully code-owned, plain orchestration may stay simpler.
+
 If you use `budget.maxCostUsd`, register `AddCostTracking(...)` as well. Runtime cost enforcement depends on provider usage metadata flowing through the cost-tracking wrapper.
 
 Nexus now provides a first-class bridge from the DSL into the orchestration runtime through `IWorkflowGraphCompiler` and `IWorkflowExecutor`.
@@ -30,6 +36,12 @@ The key runtime rules are:
 - multiple ready nodes can execute in parallel through the graph orchestrator.
 - conditional edges are evaluated after the source node completes.
 - if all incoming conditions for a node resolve to false, Nexus skips that node explicitly.
+
+## Quick Decision
+
+- choose orchestration code when the graph is small and fully local to one code path
+- choose the DSL when workflow review, serialization, or external authoring matters
+- choose checkpointing when rerunning the whole graph is too expensive
 
 ## WorkflowDefinition
 
@@ -219,6 +231,12 @@ var yaml = serializer.Serialize(workflow, "yaml");
 
 await serializer.SerializeToFileAsync(workflow, "output.json", "json");
 ```
+
+## Read Next
+
+- runtime graph execution: [Orchestration](orchestration.md)
+- durable recovery: [Checkpointing](checkpointing.md)
+- staged example: [Human-Approved Workflow](../recipes/human-approved-workflow.md)
 
 ## Variables
 

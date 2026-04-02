@@ -1,5 +1,16 @@
 # Nexus.Protocols API Reference
 
+This page is the overview for the protocol layer.
+
+Use the package pages below when you need concrete public types, setup shapes, or host boundaries.
+
+## Package Pages
+
+- [Nexus.Protocols.Mcp](nexus-protocols-mcp.md)
+- [Nexus.Protocols.A2A](nexus-protocols-a2a.md)
+- [Nexus.Protocols.AgUi](nexus-protocols-agui.md)
+- [Nexus.Hosting.AspNetCore](nexus-hosting-aspnetcore.md)
+
 ## Nexus.Protocols.Mcp
 
 Model Context Protocol integration. Adapts MCP tool servers into Nexus `ITool` instances.
@@ -61,7 +72,9 @@ ASP.NET Core hosting for protocol endpoints:
 
 ```csharp
 var app = builder.Build();
-app.MapNexusAgUi("/agent/stream");  // AG-UI SSE endpoint
-app.MapNexusA2A("/agent/a2a");      // A2A JSON-RPC endpoint
-app.MapNexusHealth("/health");       // Health check
+app.MapAgUiEndpoint("/agent/stream"); // AG-UI SSE endpoint
+app.MapA2AEndpoint("/a2a");           // A2A JSON-RPC endpoint
+app.MapHealthChecks("/health");       // Health check
 ```
+
+Prefer the dedicated package pages for current details. This overview is intentionally brief.

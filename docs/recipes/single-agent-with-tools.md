@@ -2,6 +2,10 @@
 
 Use this when you want the smallest useful Nexus setup: one agent, a few tools, and no extra workflow machinery.
 
+## Not A Good Fit
+
+Do not start here if you already know the conversation must continue over time or the work is inherently multi-stage. Add those layers only when the problem requires them.
+
 ## Source-Backed Asset
 
 - runnable example: [../../examples/Nexus.Examples.SingleAgentWithTools/README.md](../../examples/Nexus.Examples.SingleAgentWithTools/README.md)
@@ -85,3 +89,8 @@ If users continue the same conversation over time, move next to [Chat Session Wi
 - [Quick Start](../getting-started/quickstart.md)
 - [Permissions](../guides/permissions.md)
 - [Cost Tracking](../guides/cost-tracking.md)
+
+## Read Next
+
+- ongoing chat: [Chat Session With Memory](chat-session-with-memory.md)
+- package details: [Nexus.Tools.Standard](../api/nexus-tools-standard.md)

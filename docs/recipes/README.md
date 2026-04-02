@@ -6,6 +6,20 @@ The runnable step-by-step implementations for the main scenarios live under [../
 
 Use this section when you know the problem shape but want help choosing the smallest correct Nexus setup before you dive into the full example or guide.
 
+## Fast Selector
+
+| Need | Start with |
+|---|---|
+| your own provider/model picker UI | [Existing Provider UI](existing-provider-ui.md) |
+| one tool-using assistant | [Single Agent With Tools](single-agent-with-tools.md) |
+| ongoing chat with resume and compaction | [Chat Session With Memory](chat-session-with-memory.md) |
+| explicit staged workflow with approvals | [Human-Approved Workflow](human-approved-workflow.md) |
+| quick specialist fan-out before a deterministic merge | [Parallel Sub-Agents And Workflow Fan-Out](parallel-subagents-and-workflow-fanout.md) |
+| recovery instead of rerunning | [Checkpointed Recovery Workflow](checkpointed-recovery-workflow.md) |
+| narrow constrained worker | [Tool-Only Worker Agent](tool-only-worker-agent.md) |
+| bounded batch under budget | [Cost-Aware Batch Processing](cost-aware-batch-processing.md) |
+| external task system and graph brain | [Task System + Graph Brain](task-system-graph-brain.md) |
+
 ## How To Use This Section
 
 Each recipe answers four questions quickly:
@@ -16,6 +30,10 @@ Each recipe answers four questions quickly:
 4. What is the smallest viable wiring?
 
 If you need runnable code, jump to the matching example. If you need API detail, jump to the matching guide.
+
+## Scope Boundary
+
+Recipes should answer "what should I start with?" They should not become full API references or duplicate runnable example READMEs.
 
 ## Choose A Recipe
 
@@ -136,3 +154,8 @@ Typical growth path:
 - [Workflows DSL](../guides/workflows-dsl.md)
 - [Sub-Agents](../guides/sub-agents.md)
 - [External Brain & Task System](../guides/external-brain-task-system.md)
+
+## Read Next
+
+- runnable implementations: [Examples Index](../../examples/README.md)
+- package-level details: [Package Index](../api/README.md)

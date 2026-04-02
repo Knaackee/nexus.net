@@ -2,6 +2,10 @@
 
 Use this when your application already has its own UI for provider and model selection and you want Nexus only for runtime execution.
 
+## Not A Good Fit
+
+Do not start here if Nexus itself should own chat state, session UX, or an interactive command surface. In those cases start with [Nexus CLI](../examples/nexus-cli.md) or a loop-based recipe.
+
 ## Good Fit
 
 This recipe is a good fit if:
@@ -121,3 +125,8 @@ That creates two separate configuration surfaces. Keep selection in your UI and 
 - [Single Agent With Tools](single-agent-with-tools.md)
 - [Chat Session With Memory](chat-session-with-memory.md)
 - [Task System + Graph Brain](task-system-graph-brain.md)
+
+## Read Next
+
+- package map: [Package Index](../api/README.md)
+- common default composition: [Nexus.Defaults](../api/nexus-defaults.md)

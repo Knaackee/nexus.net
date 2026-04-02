@@ -2,6 +2,10 @@
 
 Use this when work should move through explicit stages and either tools or whole steps need approval.
 
+## Not A Good Fit
+
+Do not start here if you only need tool-level safety for a single task. In that case, a single-agent setup plus permissions is usually enough.
+
 ## Source-Backed Asset
 
 - runnable example: [../../examples/Nexus.Examples.HumanApprovedWorkflow/README.md](../../examples/Nexus.Examples.HumanApprovedWorkflow/README.md)
@@ -114,3 +118,8 @@ If the workflow is backed by an external task system or graph brain, combine thi
 - [Permissions](../guides/permissions.md)
 - [Workflows DSL](../guides/workflows-dsl.md)
 - [Orchestration](../guides/orchestration.md)
+
+## Read Next
+
+- external stateful workflows: [Task System + Graph Brain](task-system-graph-brain.md)
+- package details: [Nexus.Orchestration](../api/nexus-orchestration.md)

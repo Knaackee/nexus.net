@@ -2,6 +2,26 @@
 
 Nexus integrates with three external agent protocols: MCP, A2A, and AG-UI.
 
+## Use This Guide When
+
+Use this guide to choose the right protocol boundary.
+
+If you already know the package you need, go straight to the package page:
+
+- [Nexus.Protocols.Mcp](../api/nexus-protocols-mcp.md)
+- [Nexus.Protocols.A2A](../api/nexus-protocols-a2a.md)
+- [Nexus.Protocols.AgUi](../api/nexus-protocols-agui.md)
+- [Nexus.Hosting.AspNetCore](../api/nexus-hosting-aspnetcore.md)
+
+## Quick Choice
+
+| Need | Start with |
+|---|---|
+| Bring external MCP tools into Nexus | `Nexus.Protocols.Mcp` |
+| Call or expose remote agents over HTTP | `Nexus.Protocols.A2A` |
+| Stream runtime progress into a frontend | `Nexus.Protocols.AgUi` |
+| Host protocol endpoints in ASP.NET Core | `Nexus.Hosting.AspNetCore` |
+
 ## Model Context Protocol (MCP)
 
 `Nexus.Protocols.Mcp` adapts MCP tool servers into Nexus tools and AI functions so they can be registered in the normal runtime tool registry.
@@ -17,10 +37,10 @@ services.AddNexus(nexus =>
 {
     nexus.AddMcp(mcp =>
     {
-                mcp.UseDefaults();
-                mcp.AddServer("filesystem", new StdioTransport(
-                        "npx",
-                        ["-y", "@modelcontextprotocol/server-filesystem", "/workspace"]));
+        mcp.UseDefaults();
+        mcp.AddServer("filesystem", new StdioTransport(
+            "npx",
+            ["-y", "@modelcontextprotocol/server-filesystem", "/workspace"]));
     });
 });
 ```
@@ -68,13 +88,14 @@ var agent = await pool.SpawnAsync(new AgentDefinition
         new McpServerConfig
         {
             Name = "filesystem",
-            Command = "npx",
-            Arguments = ["-y", "@modelcontextprotocol/server-filesystem", "/workspace"],
+            Transport = new StdioTransport(
+                "npx",
+                ["-y", "@modelcontextprotocol/server-filesystem", "/workspace"]),
         },
         new McpServerConfig
         {
             Name = "remote-api",
-            Endpoint = new Uri("https://api.example.com/mcp"),
+            Transport = new HttpSseTransport(new Uri("https://api.example.com/mcp")),
             AllowedTools = new ToolFilter { Include = ["search", "read"] },
         },
     ],
@@ -89,8 +110,9 @@ Control which tools an agent can access from an MCP server:
 new McpServerConfig
 {
     Name = "github",
-    Command = "npx",
-    Arguments = ["-y", "@modelcontextprotocol/server-github"],
+    Transport = new StdioTransport(
+        "npx",
+        ["-y", "@modelcontextprotocol/server-github"]),
     AllowedTools = new ToolFilter
     {
         Include = ["search_repositories", "get_file_contents"],
@@ -102,6 +124,8 @@ new McpServerConfig
 ## Agent-to-Agent Protocol (A2A)
 
 `Nexus.Protocols.A2A` enables communication between agents across different systems via JSON-RPC over HTTP.
+
+Use it when the other side is another agent service, not just a tool server.
 
 ### Configuration
 
@@ -120,12 +144,21 @@ services.AddNexus(nexus =>
 ```csharp
 var a2aClient = sp.GetRequiredService<IA2AClient>();
 
-var result = await a2aClient.SendTaskAsync(new A2ATask
+var result = await a2aClient.SendTaskAsync(
+    new Uri("https://remote-agent.example.com/a2a"),
+    new A2ATaskRequest
 {
-    Endpoint = new Uri("https://remote-agent.example.com/a2a"),
-    Description = "Analyze this document",
-    Input = documentContent,
-});
+        Id = Guid.NewGuid().ToString("N"),
+        SessionId = Guid.NewGuid().ToString("N"),
+        Messages =
+        [
+            new A2AMessage
+            {
+                Role = "user",
+                Parts = [new A2ATextPart("Analyze this document")],
+            }
+        ],
+    });
 ```
 
 ## AG-UI (Agent-User Interface)
@@ -162,12 +195,14 @@ builder.Services.AddNexus(nexus =>
 var app = builder.Build();
 
 // Map protocol endpoints
-app.MapNexusAgUi("/agent/stream");   // SSE streaming endpoint
-app.MapNexusA2A("/agent/a2a");       // A2A JSON-RPC endpoint
-app.MapNexusHealth("/health");        // Health check
+app.MapAgUiEndpoint("/agent/stream"); // SSE streaming endpoint
+app.MapA2AEndpoint("/a2a");           // A2A JSON-RPC endpoint
+app.MapHealthChecks("/health");       // Health check
 
 app.Run();
 ```
+
+If you want the standard route set in one call, use `app.MapNexusEndpoints()`.
 
 ### Frontend Integration
 
@@ -199,3 +234,9 @@ Nexus.Hosting.AspNetCore
 ```
 
 All three protocol packages depend only on `Nexus.Core`. The hosting package wires them into ASP.NET Core.
+
+## Read Next
+
+- local tool integration: [Tools And Sub-Agents](../llms/tools-and-subagents.md)
+- HTTP hosting details: [Nexus.Hosting.AspNetCore](../api/nexus-hosting-aspnetcore.md)
+- protocol package detail: [Package Index](../api/README.md)

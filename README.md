@@ -54,6 +54,7 @@ flowchart TD
 
 - [Quick Start Guide](docs/guides/quick-start.md)
 - [Documentation Index](docs/README.md)
+- [Package Index](docs/api/README.md)
 - [LLM Docs](docs/llms/README.md)
 - [Installation](docs/getting-started/installation.md)
 - [CLI Getting Started](docs/getting-started/cli.md)
@@ -64,6 +65,7 @@ flowchart TD
 
 ## Recipes
 
+- [Existing Provider UI](docs/recipes/existing-provider-ui.md)
 - [Single Agent With Tools](docs/recipes/single-agent-with-tools.md)
 - [Chat Session With Memory](docs/recipes/chat-session-with-memory.md)
 - [Human-Approved Workflow](docs/recipes/human-approved-workflow.md)
@@ -111,15 +113,31 @@ flowchart TD
 
 ## API Docs
 
+- [Package Index](docs/api/README.md)
 - [Nexus.Core](docs/api/nexus-core.md)
+- [Nexus.AgentLoop](docs/api/nexus-agent-loop.md)
+- [Nexus.Auth.OAuth2](docs/api/nexus-auth-oauth2.md)
+- [Nexus.Commands](docs/api/nexus-commands.md)
+- [Nexus.Compaction](docs/api/nexus-compaction.md)
+- [Nexus.Configuration](docs/api/nexus-configuration.md)
+- [Nexus.Defaults](docs/api/nexus-defaults.md)
 - [Nexus.Orchestration](docs/api/nexus-orchestration.md)
+- [Nexus.Orchestration.Checkpointing](docs/api/nexus-orchestration-checkpointing.md)
 - [Nexus.Memory](docs/api/nexus-memory.md)
 - [Nexus.Guardrails](docs/api/nexus-guardrails.md)
 - [Nexus.Permissions](docs/api/nexus-permissions.md)
 - [Nexus.CostTracking](docs/api/nexus-cost-tracking.md)
 - [Nexus.Messaging](docs/api/nexus-messaging.md)
+- [Nexus.Sessions](docs/api/nexus-sessions.md)
+- [Nexus.Skills](docs/api/nexus-skills.md)
+- [Nexus.Telemetry](docs/api/nexus-telemetry.md)
+- [Nexus.Tools.Standard](docs/api/nexus-tools-standard.md)
 - [Nexus.Workflows.Dsl](docs/api/nexus-workflows-dsl.md)
 - [Nexus.Protocols](docs/api/nexus-protocols.md)
+- [Nexus.Protocols.Mcp](docs/api/nexus-protocols-mcp.md)
+- [Nexus.Protocols.A2A](docs/api/nexus-protocols-a2a.md)
+- [Nexus.Protocols.AgUi](docs/api/nexus-protocols-agui.md)
+- [Nexus.Hosting.AspNetCore](docs/api/nexus-hosting-aspnetcore.md)
 - [Nexus.Testing](docs/api/nexus-testing.md)
 
 ## LLM Docs
@@ -136,6 +154,7 @@ flowchart TD
 
 - [Minimal Agent](docs/examples/minimal.md)
 - [Multi-Agent Graph](docs/examples/multi-agent.md)
+- [Chat Editing With Diff And Revert](docs/examples/chat-editing-with-diff-and-revert.md)
 - [Nexus CLI](docs/examples/nexus-cli.md)
 - [Examples Index](examples/README.md)
 
