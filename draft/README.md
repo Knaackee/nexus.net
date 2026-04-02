@@ -14,8 +14,8 @@
 | 03 | [Streaming](03-streaming/streaming.md) | Dual API, Event-Hierarchie, Fan-In, Middleware |
 | 04 | [Protocols](04-protocols/protocols-overview.md) | MCP, A2A, AG-UI |
 | 05 | [Guardrails](05-guardrails/guardrails.md) | Security Pipeline, Prompt Injection, PII |
-| 06 | [Memory & Context](06-memory/memory.md) | Conversation, Context Window, Long-Term |
-| 07 | [Checkpointing](07-checkpointing/checkpointing.md) | State Recovery, Snapshot, Resume |
+| 06 | Moved to final docs: `docs/guides/memory.md` | Conversation, Context Window, Long-Term |
+| 07 | Moved to final docs: `docs/guides/checkpointing.md` | State Recovery, Snapshot, Resume |
 | 08 | [Messaging](08-messaging/messaging.md) | MessageBus, SharedState, Dead Letter |
 | 09 | [Auth & Security](09-auth/auth-security.md) | OAuth 2.1, Device Flow, Secrets |
 | 10 | [Testing](10-testing/testing.md) | Mocks, Evaluation, Integration Tests |
@@ -24,7 +24,7 @@
 | 13 | [Extensibility](13-extensibility/extensibility.md) | Middleware, Extension Methods, Custom Providers |
 | 14 | [Rate Limiting](14-rate-limiting/rate-limiting.md) | Token Bucket, Sliding Window, Per-Provider |
 | 15 | [Workflows DSL](15-workflows-dsl/workflows-dsl.md) | Serialisierbare Workflow-Definitionen, JSON/YAML, Visual Builder Support |
-| 16 | [Getting Started](16-getting-started/getting-started.md) | Installation, Quickstart, Beispiele |
+| 16 | Moved to final docs: `docs/getting-started/installation.md` and `docs/guides/quick-start.md` | Installation, Quickstart, Beispiele |
 
 ## Paketstruktur (27 Pakete)
 

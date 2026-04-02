@@ -215,9 +215,9 @@ internal sealed class OllamaChatClient : IChatClient
 
 		await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
 		using var document = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken).ConfigureAwait(false);
-		var content = document.RootElement.GetProperty("message").GetProperty("content").GetString() ?? string.Empty;
+		var assistantMessage = CreateAssistantMessage(document.RootElement.GetProperty("message"));
 
-		var chatResponse = new ChatResponse([new ChatMessage(ChatRole.Assistant, content)]);
+		var chatResponse = new ChatResponse([assistantMessage]);
 		AttachUsage(chatResponse, document.RootElement);
 		return chatResponse;
 	}
@@ -241,6 +241,7 @@ internal sealed class OllamaChatClient : IChatClient
 		using var reader = new StreamReader(stream, Encoding.UTF8);
 
 		JsonElement? finalPayload = null;
+		var generatedCallId = 0;
 		while (!reader.EndOfStream)
 		{
 			var line = await reader.ReadLineAsync(cancellationToken).ConfigureAwait(false);
@@ -253,13 +254,19 @@ internal sealed class OllamaChatClient : IChatClient
 			var text = message.TryGetProperty("content", out var contentElement)
 				? contentElement.GetString()
 				: null;
+			var toolCalls = ReadToolCalls(message, ref generatedCallId);
 
-			if (!string.IsNullOrWhiteSpace(text))
+			if (!string.IsNullOrWhiteSpace(text) || toolCalls.Count > 0)
 			{
+				var contents = new List<AIContent>();
+				if (!string.IsNullOrWhiteSpace(text))
+					contents.Add(new TextContent(text));
+				contents.AddRange(toolCalls);
+
 				yield return new ChatResponseUpdate
 				{
 					Role = ChatRole.Assistant,
-					Contents = [new TextContent(text)],
+					Contents = contents,
 				};
 			}
 		}
@@ -283,16 +290,169 @@ internal sealed class OllamaChatClient : IChatClient
 		{
 			model = _model,
 			stream,
-			messages = messages.Select(message => new
-			{
-				role = message.Role.ToString().ToLowerInvariant(),
-				content = message.Text ?? string.Empty,
-			}).ToList(),
+			messages = BuildMessages(messages),
+			tools = BuildTools(options),
 			options = new Dictionary<string, object?>
 			{
 				["temperature"] = options?.Temperature ?? 0.1,
 				["num_predict"] = options?.MaxOutputTokens,
 			},
+		};
+
+	private static ChatMessage CreateAssistantMessage(JsonElement message)
+	{
+		var contents = new List<AIContent>();
+		if (message.TryGetProperty("content", out var contentElement))
+		{
+			var text = contentElement.GetString();
+			if (!string.IsNullOrWhiteSpace(text))
+				contents.Add(new TextContent(text));
+		}
+
+		var generatedCallId = 0;
+		contents.AddRange(ReadToolCalls(message, ref generatedCallId));
+		return new ChatMessage(ChatRole.Assistant, contents);
+	}
+
+	private static List<object> BuildMessages(IEnumerable<ChatMessage> messages)
+	{
+		var serialized = new List<object>();
+		var toolNamesByCallId = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+		foreach (var message in messages)
+		{
+			if (message.Role == ChatRole.Tool)
+			{
+				foreach (var content in message.Contents.OfType<FunctionResultContent>())
+				{
+					serialized.Add(new
+					{
+						role = "tool",
+						content = SerializeToolResult(content.Result),
+						tool_name = toolNamesByCallId.GetValueOrDefault(content.CallId),
+					});
+				}
+
+				continue;
+			}
+
+			var text = message.Text ?? string.Empty;
+			var functionCalls = message.Contents.OfType<FunctionCallContent>().ToList();
+			foreach (var functionCall in functionCalls)
+				toolNamesByCallId[functionCall.CallId] = functionCall.Name;
+
+			serialized.Add(new
+			{
+				role = message.Role.ToString().ToLowerInvariant(),
+				content = text,
+				tool_calls = functionCalls.Count == 0
+					? null
+					: functionCalls.Select(functionCall => new
+					{
+						type = "function",
+						function = new
+						{
+							name = functionCall.Name,
+							arguments = functionCall.Arguments,
+						},
+					}).ToList(),
+			});
+		}
+
+		return serialized;
+	}
+
+	private static List<OllamaToolDefinition>? BuildTools(ChatOptions? options)
+	{
+		if (options?.Tools is not { Count: > 0 })
+			return null;
+
+		return options.Tools.Select(tool =>
+			new OllamaToolDefinition(
+				"function",
+				new OllamaFunctionDefinition(
+					tool.Name,
+					tool.Description,
+					tool is AIFunction function ? function.JsonSchema : JsonSerializer.SerializeToElement(new { type = "object", properties = new { } }))))
+			.ToList();
+	}
+
+	private static List<FunctionCallContent> ReadToolCalls(JsonElement message, ref int generatedCallId)
+	{
+		var results = new List<FunctionCallContent>();
+		if (!message.TryGetProperty("tool_calls", out var toolCallsElement) || toolCallsElement.ValueKind != JsonValueKind.Array)
+			return results;
+
+		foreach (var toolCall in toolCallsElement.EnumerateArray())
+		{
+			if (!toolCall.TryGetProperty("function", out var functionElement))
+				continue;
+
+			var name = functionElement.TryGetProperty("name", out var nameElement)
+				? nameElement.GetString()
+				: null;
+			if (string.IsNullOrWhiteSpace(name))
+				continue;
+
+			var callId = toolCall.TryGetProperty("id", out var idElement) && !string.IsNullOrWhiteSpace(idElement.GetString())
+				? idElement.GetString()!
+				: FormattableString.Invariant($"ollama-call-{++generatedCallId}");
+
+			var arguments = functionElement.TryGetProperty("arguments", out var argumentsElement)
+				? ConvertToDictionary(argumentsElement)
+				: new Dictionary<string, object?>();
+
+			results.Add(new FunctionCallContent(callId, name, arguments));
+		}
+
+		return results;
+	}
+
+	private static Dictionary<string, object?> ConvertToDictionary(JsonElement element)
+	{
+		if (element.ValueKind == JsonValueKind.String)
+		{
+			var raw = element.GetString();
+			if (!string.IsNullOrWhiteSpace(raw))
+			{
+				using var document = JsonDocument.Parse(raw);
+				return ConvertToDictionary(document.RootElement);
+			}
+		}
+
+		if (element.ValueKind != JsonValueKind.Object)
+			return [];
+
+		var dictionary = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase);
+		foreach (var property in element.EnumerateObject())
+			dictionary[property.Name] = ConvertJsonValue(property.Value);
+
+		return dictionary;
+	}
+
+	private static object? ConvertJsonValue(JsonElement value)
+		=> value.ValueKind switch
+		{
+			JsonValueKind.Object => ConvertToDictionary(value),
+			JsonValueKind.Array => value.EnumerateArray().Select(ConvertJsonValue).ToList(),
+			JsonValueKind.String => value.GetString(),
+			JsonValueKind.Number => value.TryGetInt64(out var integer)
+				? integer
+				: value.TryGetDouble(out var floating)
+					? floating
+					: value.GetDecimal(),
+			JsonValueKind.True => true,
+			JsonValueKind.False => false,
+			JsonValueKind.Null => null,
+			_ => value.GetRawText(),
+		};
+
+	private static string SerializeToolResult(object? result)
+		=> result switch
+		{
+			null => "null",
+			string text => text,
+			_ => result.ToString() ?? "null",
 		};
 
 	private static void AttachUsage(object target, JsonElement payload)
@@ -351,3 +511,7 @@ internal sealed class CopilotModelListResponse
 
 [JsonSerializable(typeof(CopilotModelListResponse))]
 internal sealed partial class CopilotCliModelJsonContext : JsonSerializerContext;
+
+internal sealed record OllamaToolDefinition(string Type, OllamaFunctionDefinition Function);
+
+internal sealed record OllamaFunctionDefinition(string Name, string Description, JsonElement Parameters);

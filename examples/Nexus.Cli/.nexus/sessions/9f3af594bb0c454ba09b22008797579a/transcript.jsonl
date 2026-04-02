@@ -1,0 +1,2 @@
+﻿{"role":"user","text":"asdf"}
+{"role":"assistant","text":"I didn\u0027t understand \u0022asdf\u0022. Do you want me to run a command in the workspace or show something? Current working directory: D:\\Development\\nexus\\examples\\Nexus.cli\n\nExamples I can do for you:\n- Show files: dir\n- Show git status: git status\n- Run the example (if it\u0027s a .NET project): dotnet run\n- Show help for available CLI commands: .\\nexus.exe --help (or tell me which binary)\n\nWhich would you like me to do?"}

@@ -10,6 +10,8 @@ The `Nexus.Cli` is a fully-featured interactive coding agent built with Spectre.
 - Provider authentication and token caching for hosted providers
 - Server-Sent Events (SSE) streaming parsing
 - Multi-session agent-loop management
+- Chat-driven file editing with tracked diffs and revert support
+- A full-screen `--tui` mode with alternate-screen rendering, centralized state, multi-pane layout, and line-mode fallback
 - Rich terminal rendering with Spectre.Console
 - Slash-command dispatch with `Nexus.Commands`
 - Reusable skill profiles with `Nexus.Skills`
@@ -62,6 +64,10 @@ The CLI command surface is intentionally documented here as the canonical refere
 | `/resume [key]` | Resume the latest persisted chat session |
 | `/cost` | Show token and cost information |
 | `/status` | Show current states and previews |
+| `/changes` | List tracked file changes from tool-driven edits |
+| `/diff [changeId]` | Show the unified diff for the latest or selected tracked change |
+| `/revert [changeId]` | Revert the latest or selected tracked change |
+| `/tools` | Show the recent tool activity stream for the active session |
 | `/clear` | Clear the active session conversation |
 | `/compact` | Compact the active session history |
 | `/cancel` | Cancel the active request |
@@ -75,11 +81,48 @@ cd examples/Nexus.Cli
 dotnet run
 ```
 
+For the new fullscreen terminal experience:
+
+```bash
+dotnet run --project examples/Nexus.Cli -- --tui
+```
+
+## TUI Layout
+
+The fullscreen host now uses a single render loop and a state store instead of writing directly to the terminal from session logic.
+
+- header and status lines for provider, workspace, active session, and notices
+- session sidebar that collapses away on narrower terminals
+- transcript pane with scrollback and filter mode
+- tool activity pane with grouped status lines
+- multiline composer with cursor movement and history recall
+
+## TUI Shortcuts
+
+| Shortcut | Action |
+|---------|--------|
+| `Enter` | Send the current composer text |
+| `Shift+Enter` | Insert a newline in the composer |
+| `Tab` / `Shift+Tab` | Cycle active session |
+| `Ctrl+P` | Open the session picker |
+| `Ctrl+K` | Open the command palette |
+| `Ctrl+F` | Open transcript search/filter |
+| `Ctrl+G` | Clear the active transcript filter |
+| `Ctrl+E` | Export the current transcript to `.nexus/exports/` |
+| `Ctrl+L` | Clear the active chat |
+| `Ctrl+C` | Cancel the active request, or exit if idle |
+| `Ctrl+Q` | Exit the TUI |
+| `PageUp` / `PageDown` | Scroll transcript viewport |
+
+The TUI also falls back automatically to the existing line-oriented mode when stdin/stdout is redirected or the terminal is too small for the fullscreen layout.
+
 On first run with GitHub Copilot, authenticate via GitHub device flow. The token is cached for subsequent runs.
 
 Model selection is provider-driven. `/models` shows the currently discovered runtime list for the active provider, and `/new` without an explicit model uses that provider's current default.
 
 If `.nexus/mcp.json` or `~/.nexus/mcp.json` exists, the CLI also loads configured MCP servers and makes their tools available to the active session.
+
+When an agent edits a file through `file_edit` or `file_write`, the CLI now records that mutation in a shared file-change journal. The `/changes`, `/diff`, and `/revert` commands surface the same tracked state that other hosts can read through `IFileChangeJournal`.
 
 ## Budget Enforcement Note
 

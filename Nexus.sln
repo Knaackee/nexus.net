@@ -117,6 +117,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Nexus.Examples.ParallelSubA
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Nexus.Examples.Tests", "tests\Nexus.Examples.Tests\Nexus.Examples.Tests.csproj", "{2AE652B7-2550-42AE-A055-02CC2D0C2885}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Nexus.Examples.ChatEditingWithDiffAndRevert", "examples\Nexus.Examples.ChatEditingWithDiffAndRevert\Nexus.Examples.ChatEditingWithDiffAndRevert.csproj", "{AD5EA320-260D-4143-8D1A-25C9CC879244}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -763,6 +765,18 @@ Global
 		{2AE652B7-2550-42AE-A055-02CC2D0C2885}.Release|x64.Build.0 = Release|Any CPU
 		{2AE652B7-2550-42AE-A055-02CC2D0C2885}.Release|x86.ActiveCfg = Release|Any CPU
 		{2AE652B7-2550-42AE-A055-02CC2D0C2885}.Release|x86.Build.0 = Release|Any CPU
+		{AD5EA320-260D-4143-8D1A-25C9CC879244}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{AD5EA320-260D-4143-8D1A-25C9CC879244}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{AD5EA320-260D-4143-8D1A-25C9CC879244}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{AD5EA320-260D-4143-8D1A-25C9CC879244}.Debug|x64.Build.0 = Debug|Any CPU
+		{AD5EA320-260D-4143-8D1A-25C9CC879244}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{AD5EA320-260D-4143-8D1A-25C9CC879244}.Debug|x86.Build.0 = Debug|Any CPU
+		{AD5EA320-260D-4143-8D1A-25C9CC879244}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{AD5EA320-260D-4143-8D1A-25C9CC879244}.Release|Any CPU.Build.0 = Release|Any CPU
+		{AD5EA320-260D-4143-8D1A-25C9CC879244}.Release|x64.ActiveCfg = Release|Any CPU
+		{AD5EA320-260D-4143-8D1A-25C9CC879244}.Release|x64.Build.0 = Release|Any CPU
+		{AD5EA320-260D-4143-8D1A-25C9CC879244}.Release|x86.ActiveCfg = Release|Any CPU
+		{AD5EA320-260D-4143-8D1A-25C9CC879244}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -821,5 +835,6 @@ Global
 		{7EB81881-39AA-4F7C-9CB5-BC949AA7DF1F} = {B36A84DF-456D-A817-6EDD-3EC3E7F6E11F}
 		{F3C01318-CC10-4D26-9EA1-D0D58E191DB8} = {B36A84DF-456D-A817-6EDD-3EC3E7F6E11F}
 		{2AE652B7-2550-42AE-A055-02CC2D0C2885} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
+		{AD5EA320-260D-4143-8D1A-25C9CC879244} = {B36A84DF-456D-A817-6EDD-3EC3E7F6E11F}
 	EndGlobalSection
 EndGlobal

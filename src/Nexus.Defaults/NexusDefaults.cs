@@ -51,6 +51,8 @@ namespace Nexus.Defaults
         public Action<SkillBuilder>? ConfigureSkills { get; set; }
 
         public Action<StandardToolBuilder>? ConfigureTools { get; set; }
+
+        public Action<IServiceCollection>? ConfigureServices { get; set; }
     }
 
     public static class NexusDefaultsBuilderExtensions
@@ -59,6 +61,8 @@ namespace Nexus.Defaults
         {
             var options = GetOrCreateOptions(builder.Services);
             configure?.Invoke(options);
+
+            options.ConfigureServices?.Invoke(builder.Services);
 
             builder.AddConfiguration(configuration =>
             {

@@ -11,6 +11,14 @@ cd examples/Nexus.Cli
 dotnet run
 ```
 
+Fullscreen mode is available via:
+
+```bash
+dotnet run --project examples/Nexus.Cli -- --tui
+```
+
+The TUI now runs with a dedicated state store and multi-pane layout instead of line-by-line console writes. Use `Ctrl+P` for the session picker, `Ctrl+K` for the command palette, `Ctrl+F` for transcript filtering, and `Ctrl+E` to export the current transcript.
+
 On first run with GitHub Copilot, you'll be prompted to authenticate with GitHub:
 
 ```
@@ -28,6 +36,7 @@ If you switch the provider via environment configuration, the CLI discovers the 
 - Run `/new <key> [model] [skill]` to create a chat.
 - Send a normal message to the active chat.
 - Use `/status`, `/cost`, `/list`, and `/resume` to inspect or continue work.
+- Use `/changes`, `/diff`, `/revert`, and `/tools` after tool-driven edits to inspect or undo file mutations.
 
 ## Where To Go Next
 

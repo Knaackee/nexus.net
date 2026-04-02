@@ -2,6 +2,7 @@ using System.Globalization;
 using Nexus.Commands;
 using Nexus.Protocols.Mcp;
 using Nexus.Skills;
+using Nexus.Tools.Standard;
 using Spectre.Console;
 
 namespace Nexus.Cli;
@@ -18,7 +19,9 @@ internal sealed class CliApplication : IDisposable
     private readonly SlashCommandDispatcher _dispatcher;
     private readonly Func<string?> _lineReader;
     private readonly bool _useInteractivePrompt;
+    private readonly bool _useTuiPresentation;
     private bool _initialized;
+    private bool _started;
 
     public CliApplication(
         IAnsiConsole? console = null,
@@ -27,7 +30,8 @@ internal sealed class CliApplication : IDisposable
         SkillCatalog? skills = null,
         IReadOnlyList<McpServerConfig>? mcpServers = null,
         Func<string?>? lineReader = null,
-        bool? useInteractivePrompt = null)
+        bool? useInteractivePrompt = null,
+        bool useTuiPresentation = false)
     {
         _console = console ?? AnsiConsole.Console;
         _workspace = workspace ?? CliWorkspaceOptions.Create(Directory.GetCurrentDirectory());
@@ -36,6 +40,7 @@ internal sealed class CliApplication : IDisposable
         _skills = skills ?? CliSkillCatalog.CreateDefaultCatalog(_workspace);
         _lineReader = lineReader ?? Console.ReadLine;
         _useInteractivePrompt = useInteractivePrompt ?? !Console.IsInputRedirected;
+        _useTuiPresentation = useTuiPresentation;
         _manager = new ChatManager(
             _skills,
             projectRoot: _workspace.ProjectRoot,
@@ -50,6 +55,12 @@ internal sealed class CliApplication : IDisposable
 
     internal ChatManager Manager => _manager;
 
+    internal CliWorkspaceOptions Workspace => _workspace;
+
+    internal string ProviderName => _chatProvider.ProviderName;
+
+    internal IReadOnlyList<ICommand> ListCommands() => _commands.ListAll();
+
     public static CliApplication CreateDefault() => new();
 
     public async Task InitializeAsync(CancellationToken ct = default)
@@ -63,19 +74,8 @@ internal sealed class CliApplication : IDisposable
 
     public async Task<int> RunAsync(CancellationToken ct = default)
     {
-        _console.Write(new FigletText("Nexus CLI").Color(Color.Cyan1));
-        _console.MarkupLine($"[grey]A multi-chat coding agent powered by {Markup.Escape(_chatProvider.ProviderName)}[/]");
-        _console.WriteLine();
-
-        if (!await AuthenticateAsync(ct).ConfigureAwait(false))
+        if (!await StartAsync(ct).ConfigureAwait(false))
             return 1;
-
-        var status = _chatProvider.RequiresAuthentication
-            ? $"Authenticated with {_chatProvider.ProviderName}!"
-            : $"Connected to {_chatProvider.ProviderName}.";
-        _console.MarkupLine($"[green]{Markup.Escape(status)}[/]");
-        _console.WriteLine();
-        PrintHelp();
 
         while (!ct.IsCancellationRequested)
         {
@@ -96,6 +96,28 @@ internal sealed class CliApplication : IDisposable
         }
 
         return 0;
+    }
+
+    public async Task<bool> StartAsync(CancellationToken ct = default)
+    {
+        if (_started)
+            return true;
+
+        _console.Write(new FigletText("Nexus CLI").Color(Color.Cyan1));
+        _console.MarkupLine($"[grey]A multi-chat coding agent powered by {Markup.Escape(_chatProvider.ProviderName)}[/]");
+        _console.WriteLine();
+
+        if (!await AuthenticateAsync(ct).ConfigureAwait(false))
+            return false;
+
+        var status = _chatProvider.RequiresAuthentication
+            ? $"Authenticated with {_chatProvider.ProviderName}!"
+            : $"Connected to {_chatProvider.ProviderName}.";
+        _console.MarkupLine($"[green]{Markup.Escape(status)}[/]");
+        _console.WriteLine();
+        PrintHelp();
+        _started = true;
+        return true;
     }
 
     public async Task<bool> ExecuteInputAsync(string input, CancellationToken ct = default)
@@ -431,6 +453,18 @@ internal sealed class CliApplication : IDisposable
     private void AttachSession(ChatSession session)
     {
         session.OnChunk += chunk => _console.Markup(Markup.Escape(chunk));
+        if (_useTuiPresentation)
+            return;
+
+        session.OnToolActivity += activity =>
+        {
+            if (string.Equals(activity.Status, "started", StringComparison.OrdinalIgnoreCase))
+                _console.MarkupLine($"\n[grey]tool:[/] {Markup.Escape(activity.ToolName)} [grey]- {Markup.Escape(activity.Message)}[/]");
+            else if (string.Equals(activity.Status, "completed", StringComparison.OrdinalIgnoreCase) && activity.ChangeId.HasValue)
+                _console.MarkupLine($"\n[blue]change #{activity.ChangeId.Value}[/] [grey]{Markup.Escape(activity.Message)}[/]");
+            else if (string.Equals(activity.Status, "failed", StringComparison.OrdinalIgnoreCase))
+                _console.MarkupLine($"\n[red]{Markup.Escape(activity.Message)}[/]");
+        };
         session.OnStateChanged += changedSession =>
         {
             if (changedSession.State == ChatSessionState.Failed)
@@ -500,6 +534,122 @@ internal sealed class CliApplication : IDisposable
                 snapshot.OutputTokens.ToString(CultureInfo.InvariantCulture),
                 snapshot.TotalTokens.ToString(CultureInfo.InvariantCulture),
                 snapshot.EstimatedCost.HasValue ? $"${snapshot.EstimatedCost.Value:F4}" : "n/a");
+        }
+
+        _console.Write(table);
+        return CommandResult.Continue();
+    }
+
+    private CommandResult HandleChanges()
+    {
+        var session = _manager.ActiveSession;
+        if (session is null)
+        {
+            _console.MarkupLine("[yellow]No active chat. Use /new or /resume first.[/]");
+            return CommandResult.Continue();
+        }
+
+        var changes = session.GetTrackedChanges();
+        if (changes.Count == 0)
+        {
+            _console.MarkupLine("[grey]No tracked file changes in this chat yet.[/]");
+            return CommandResult.Continue();
+        }
+
+        var table = new Table()
+            .Border(TableBorder.Rounded)
+            .AddColumn("#")
+            .AddColumn("Path")
+            .AddColumn("Tool")
+            .AddColumn("Diff")
+            .AddColumn("Status");
+
+        foreach (var change in changes)
+        {
+            table.AddRow(
+                change.ChangeId.ToString(CultureInfo.InvariantCulture),
+                Markup.Escape(change.Path),
+                Markup.Escape(change.ToolName),
+                $"+{change.Stats.AddedLines}/-{change.Stats.RemovedLines}",
+                change.IsReverted ? "[yellow]reverted[/]" : "[green]applied[/]");
+        }
+
+        _console.Write(table);
+        return CommandResult.Continue();
+    }
+
+    private CommandResult HandleDiff(CommandInvocation invocation)
+    {
+        var session = _manager.ActiveSession;
+        if (session is null)
+        {
+            _console.MarkupLine("[yellow]No active chat. Use /new or /resume first.[/]");
+            return CommandResult.Continue();
+        }
+
+        var change = ResolveTrackedChange(session, invocation.Arguments);
+        if (change is null)
+        {
+            _console.MarkupLine("[yellow]No tracked file change matched that request.[/]");
+            return CommandResult.Continue();
+        }
+
+        _console.MarkupLine($"[cyan]Diff for change #{change.ChangeId}[/] [grey]({Markup.Escape(change.Path)})[/]");
+        _console.Write(new Panel(Markup.Escape(change.UnifiedDiff)).Header("diff").Border(BoxBorder.Rounded));
+        return CommandResult.Continue();
+    }
+
+    private async Task<CommandResult> HandleRevertAsync(CommandInvocation invocation, CancellationToken ct)
+    {
+        var session = _manager.ActiveSession;
+        if (session is null)
+        {
+            _console.MarkupLine("[yellow]No active chat. Use /new or /resume first.[/]");
+            return CommandResult.Continue();
+        }
+
+        var changeId = ParseChangeId(invocation.Arguments);
+        var result = await session.RevertTrackedChangeAsync(changeId, ct).ConfigureAwait(false);
+        if (!result.Succeeded)
+        {
+            _console.MarkupLine($"[red]{Markup.Escape(result.Message)}[/]");
+            return CommandResult.Continue();
+        }
+
+        _console.MarkupLine($"[yellow]{Markup.Escape(result.Message)}[/]");
+        return CommandResult.Continue();
+    }
+
+    private CommandResult HandleTools()
+    {
+        var session = _manager.ActiveSession;
+        if (session is null)
+        {
+            _console.MarkupLine("[yellow]No active chat. Use /new or /resume first.[/]");
+            return CommandResult.Continue();
+        }
+
+        var items = session.ToolActivity;
+        if (items.Count == 0)
+        {
+            _console.MarkupLine("[grey]No tool activity recorded yet.[/]");
+            return CommandResult.Continue();
+        }
+
+        var table = new Table()
+            .Border(TableBorder.Rounded)
+            .AddColumn("When")
+            .AddColumn("Tool")
+            .AddColumn("Status")
+            .AddColumn("Message");
+
+        foreach (var item in items.TakeLast(20))
+        {
+            table.AddRow(
+                item.Timestamp.ToLocalTime().ToString("HH:mm:ss", CultureInfo.InvariantCulture),
+                Markup.Escape(item.ToolName),
+                Markup.Escape(item.Status),
+                Markup.Escape(item.Message));
         }
 
         _console.Write(table);
@@ -595,6 +745,10 @@ internal sealed class CliApplication : IDisposable
 
             return CommandResult.Continue();
         }));
+        registry.Register(new DelegateCommand("changes", "List tracked file changes for the active chat.", "/changes", _ => HandleChanges()));
+        registry.Register(new DelegateCommand("diff", "Show the diff for a tracked file change.", "/diff [changeId]", HandleDiff));
+        registry.Register(new DelegateCommand("revert", "Revert a tracked file change.", "/revert [changeId]", (invocation, ct) => HandleRevertAsync(invocation, ct)));
+        registry.Register(new DelegateCommand("tools", "Show recent tool activity for the active chat.", "/tools", _ => HandleTools()));
         registry.Register(new DelegateCommand("skill", "List skills or switch the active chat skill.", "/skill [name]", invocation =>
         {
             HandleSkill(invocation.Arguments.Count > 0 ? invocation.Arguments[0] : null);
@@ -648,5 +802,21 @@ internal sealed class CliApplication : IDisposable
 
         Console.Write($"{Markup.Remove(prompt)}> ");
         return _lineReader();
+    }
+
+    private static TrackedFileChange? ResolveTrackedChange(ChatSession session, IReadOnlyList<string> arguments)
+    {
+        var changeId = ParseChangeId(arguments);
+        return session.GetTrackedChange(changeId);
+    }
+
+    private static int? ParseChangeId(IReadOnlyList<string> arguments)
+    {
+        if (arguments.Count == 0)
+            return null;
+
+        return int.TryParse(arguments[0], NumberStyles.Integer, CultureInfo.InvariantCulture, out var changeId)
+            ? changeId
+            : null;
     }
 }

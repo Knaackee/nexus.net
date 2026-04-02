@@ -22,6 +22,7 @@
     <ProjectReference Include="..\..\src\Nexus.Guardrails\Nexus.Guardrails.csproj" />
     <ProjectReference Include="..\..\src\Nexus.Protocols.Mcp\Nexus.Protocols.Mcp.csproj" />
     <ProjectReference Include="..\..\src\Nexus.Skills\Nexus.Skills.csproj" />
+    <ProjectReference Include="..\..\src\Nexus.Tools.Standard\Nexus.Tools.Standard.csproj" />
   </ItemGroup>
 
   <ItemGroup>

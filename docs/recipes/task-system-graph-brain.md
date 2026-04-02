@@ -2,71 +2,14 @@
 
 Use this when your application already has a real task backend and a real knowledge system, and Nexus should sit on top as the agent runtime.
 
-## Good Fit
+## Canonical Sources
 
-This recipe is a good fit if:
+- guide: [External Brain & Task System](../guides/external-brain-task-system.md)
+- guide: [Memory & Context](../guides/memory.md)
+- related recipe: [Human-Approved Workflow](human-approved-workflow.md)
 
-- tasks already live in another system
-- Ladybug or another graph database acts as the "brain"
-- Nexus should coordinate reasoning, tool use, approvals, and recall
+## Decision
 
-## Core Pieces
+Use this recipe when Nexus should execute agents over existing systems of record rather than replacing them.
 
-Use these Nexus components:
-
-- `ITool` adapters for task operations
-- `ITool` adapters or recall providers for graph access
-- `IAgentLoop` for the interactive session
-- `WorkflowRoutingStrategy` if the flow is staged
-- `ICompactionRecallProvider` if graph context should survive compaction
-
-## Minimal Architecture
-
-```text
-User
-  -> Nexus AgentLoop
-      -> task_* tools -> external task system
-      -> graph_* tools -> Ladybug
-      -> compaction -> LadybugRecallProvider -> active context
-```
-
-## Recommended Rules
-
-- keep task truth in the task backend
-- keep semantic truth in Ladybug
-- keep only active working context in Nexus
-- use recall to rehydrate facts, not to replace transactional reads
-
-## Smallest Useful Wiring
-
-```csharp
-services.AddNexus(nexus =>
-{
-    nexus.UseChatClient(_ => chatClient);
-    nexus.AddAgentLoop(loop => loop.UseDefaults());
-    nexus.AddCompaction(c => c.UseDefaults());
-    nexus.AddMemory(m => m.UseInMemory());
-    nexus.AddPermissions(p => p.UsePreset(PermissionPresets.Interactive));
-});
-
-services.AddSingleton<ITool, TaskGetTool>();
-services.AddSingleton<ITool, TaskUpdateStatusTool>();
-services.AddSingleton<ITool, LadybugQueryTool>();
-services.AddSingleton<ICompactionRecallProvider, LadybugRecallProvider>();
-```
-
-## What To Avoid
-
-Avoid duplicating whole task objects or whole graph subtrees into Nexus memory.
-
-Instead:
-
-- fetch exact task truth from the task tool
-- fetch exact graph truth from Ladybug
-- only inject the smallest recalled facts back into the active prompt
-
-## Related Guides
-
-- [External Brain & Task System](../guides/external-brain-task-system.md)
-- [Memory & Context](../guides/memory.md)
-- [Human-Approved Workflow](human-approved-workflow.md)
+The external-brain guide is the canonical architecture document. This page stays as a scenario selector so task ownership, graph ownership, and Nexus runtime responsibilities do not drift across two parallel writeups.

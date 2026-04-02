@@ -16,8 +16,10 @@
     <ProjectReference Include="..\..\src\Nexus.AgentLoop\Nexus.AgentLoop.csproj" />
     <ProjectReference Include="..\..\src\Nexus.Compaction\Nexus.Compaction.csproj" />
     <ProjectReference Include="..\..\src\Nexus.Core\Nexus.Core.csproj" />
+    <ProjectReference Include="..\..\src\Nexus.Defaults\Nexus.Defaults.csproj" />
     <ProjectReference Include="..\..\src\Nexus.Memory\Nexus.Memory.csproj" />
     <ProjectReference Include="..\..\src\Nexus.Orchestration\Nexus.Orchestration.csproj" />
+    <ProjectReference Include="..\..\src\Nexus.Permissions\Nexus.Permissions.csproj" />
     <ProjectReference Include="..\..\src\Nexus.Sessions\Nexus.Sessions.csproj" />
     <ProjectReference Include="..\..\src\Nexus.Testing\Nexus.Testing.csproj" />
     <ProjectReference Include="..\..\src\Nexus.Tools.Standard\Nexus.Tools.Standard.csproj" />

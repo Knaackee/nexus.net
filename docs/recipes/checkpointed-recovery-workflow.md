@@ -2,26 +2,14 @@
 
 Use this when a workflow is long enough or expensive enough that restart-from-zero is unacceptable.
 
-## Good Fit
+## Canonical Sources
 
-- workflows have multiple expensive nodes
-- failures can happen after partial completion
-- operators need resume instead of rerun
+- guide: [Checkpointing](../guides/checkpointing.md)
+- guide: [Orchestration](../guides/orchestration.md)
+- runnable examples index: [../../examples/README.md](../../examples/README.md)
 
-## Core Pieces
+## Decision
 
-- `AddOrchestration(o => o.UseDefaults())`
-- `AddCheckpointing(c => c.UseInMemory())` or another checkpoint store
-- `IOrchestrator`
-- `OrchestrationSnapshot` and checkpoint serializers
+Use this recipe if you need resume semantics after partial graph progress.
 
-## Shape
-
-- execute a graph
-- save checkpoints after relevant nodes
-- restore snapshot state when rerunning after a failure
-
-## Related Guides
-
-- [Checkpointing](../guides/checkpointing.md)
-- [Orchestration](../guides/orchestration.md)
+Prefer the checkpointing guide for API details and the examples index for runnable scenario projects. This page stays intentionally thin so the checkpointing contract only has one real home.

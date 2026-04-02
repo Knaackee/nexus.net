@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Nexus.Defaults\Nexus.Defaults.csproj" />
+    <ProjectReference Include="..\..\src\Nexus.Permissions\Nexus.Permissions.csproj" />
+    <ProjectReference Include="..\..\src\Nexus.Tools.Standard\Nexus.Tools.Standard.csproj" />
+  </ItemGroup>
+
+</Project>

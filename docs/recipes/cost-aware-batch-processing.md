@@ -2,26 +2,14 @@
 
 Use this when many similar tasks must be executed under an explicit spend constraint.
 
-## Good Fit
+## Canonical Sources
 
-- tasks can be run as a bounded batch
-- each item does not need a full interactive session
-- the batch has a real cost ceiling
+- guide: [Cost Tracking](../guides/cost-tracking.md)
+- guide: [Orchestration](../guides/orchestration.md)
+- runnable examples index: [../../examples/README.md](../../examples/README.md)
 
-## Core Pieces
+## Decision
 
-- `AddCostTracking(...)`
-- agent or workflow budgets
-- orchestration sequencing or bounded graph execution
-- post-run cost snapshot inspection
+Use this recipe when cost is a hard batch control, not just an observability metric.
 
-## Operating Notes
-
-- set per-agent or per-workflow budgets before large runs
-- prefer shorter prompts and narrower tools for batch workers
-- surface estimated cost with each run so the batch controller can stop early
-
-## Related Guides
-
-- [Cost Tracking](../guides/cost-tracking.md)
-- [Orchestration](../guides/orchestration.md)
+Start from the cost-tracking guide for pricing and token surfaces, then narrow the orchestration shape to sequence, graph, or bounded parallelism based on the batch controller you actually need.

@@ -47,7 +47,7 @@ internal sealed class ChatManager : IDisposable
 
     public ChatSession Add(string key, string model, SkillDefinition? skill = null)
     {
-        var session = new ChatSession(key, model, skill ?? ResolveDefaultSkill(), _projectRoot, _sessionStorePath, _mcpServers: _mcpServers, chatClientFactory: _chatClientFactory);
+        var session = new ChatSession(key, model, skill ?? ResolveDefaultSkill(), _projectRoot, _sessionStorePath, mcpServers: _mcpServers, chatClientFactory: _chatClientFactory);
 
         if (!_sessions.TryAdd(key, session))
         {
@@ -79,7 +79,7 @@ internal sealed class ChatManager : IDisposable
         if (existing.State == ChatSessionState.Running)
             throw new InvalidOperationException("Cannot replace a running chat session.");
 
-        var replacement = new ChatSession(key, model, skill ?? existing.Skill, _projectRoot, _sessionStorePath, _mcpServers: _mcpServers, chatClientFactory: _chatClientFactory);
+        var replacement = new ChatSession(key, model, skill ?? existing.Skill, _projectRoot, _sessionStorePath, mcpServers: _mcpServers, chatClientFactory: _chatClientFactory);
         _sessions[key] = replacement;
         existing.Dispose();
 

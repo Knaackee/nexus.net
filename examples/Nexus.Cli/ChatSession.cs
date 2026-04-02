@@ -1,23 +1,24 @@
+using System.Globalization;
 using System.Text;
+using System.Text.Json;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Nexus.AgentLoop;
 using Nexus.Compaction;
 using Nexus.Configuration;
 using Nexus.Core.Agents;
+using Nexus.Core.Contracts;
 using Nexus.Core.Tools;
 using Nexus.CostTracking;
+using Nexus.Permissions;
 using Nexus.Protocols.Mcp;
 using Nexus.Sessions;
 using Nexus.Skills;
+using Nexus.Tools.Standard;
 using McpServerConfig = Nexus.Protocols.Mcp.McpServerConfig;
 
 namespace Nexus.Cli;
 
-/// <summary>
-/// Represents a single chat session running against a Copilot model.
-/// Captures streamed output and tracks conversation history.
-/// </summary>
 internal sealed class ChatSession : IDisposable
 {
     private const string BaseSystemPrompt = "You are Nexus CLI, an interactive coding agent. Be concise, grounded in the current workspace, and use tools only when they improve the answer.";
@@ -25,29 +26,16 @@ internal sealed class ChatSession : IDisposable
     private readonly global::Nexus.Defaults.NexusDefaultHost _host;
     private readonly Func<string, IChatClient> _chatClientFactory;
     private readonly StringBuilder _lastResponse = new();
+    private readonly IReadOnlyList<McpServerConfig> _mcpServers;
+    private readonly SemaphoreSlim _mcpInitializationGate = new(1, 1);
+    private readonly List<CliToolActivity> _toolActivity = [];
+    private readonly object _activityGate = new();
+    private readonly string? _projectRoot;
     private CancellationTokenSource? _cts;
     private SessionId? _sessionId;
     private int _messageCount;
     private SkillDefinition _skill;
-    private readonly string? _projectRoot;
-    private readonly IReadOnlyList<McpServerConfig> _mcpServers;
-    private readonly SemaphoreSlim _mcpInitializationGate = new(1, 1);
     private bool _mcpToolsInitialized;
-
-    public string Key { get; }
-    public string Model { get; }
-    public SkillDefinition Skill => _skill;
-    public string SkillName => _skill.Name;
-    public SessionId? PersistedSessionId => _sessionId;
-    public ChatSessionState State { get; private set; } = ChatSessionState.Idle;
-    public string LastOutput => _lastResponse.ToString();
-    public int MessageCount => _messageCount;
-
-    /// <summary>Raised for each streamed text chunk so the UI can update in real time.</summary>
-    public event Action<string>? OnChunk;
-
-    /// <summary>Raised when a run completes or fails.</summary>
-    public event Action<ChatSession>? OnStateChanged;
 
     public ChatSession(
         string key,
@@ -57,7 +45,7 @@ internal sealed class ChatSession : IDisposable
         string? sessionStoreDirectory = null,
         SessionId? sessionId = null,
         int messageCount = 0,
-        IReadOnlyList<McpServerConfig>? _mcpServers = null,
+        IReadOnlyList<McpServerConfig>? mcpServers = null,
         Func<string, IChatClient>? chatClientFactory = null)
     {
         Key = key;
@@ -67,9 +55,37 @@ internal sealed class ChatSession : IDisposable
         _sessionId = sessionId;
         _messageCount = messageCount;
         _chatClientFactory = chatClientFactory ?? (resolvedModel => new CopilotChatClient(resolvedModel));
-        this._mcpServers = _mcpServers ?? [];
+        _mcpServers = mcpServers ?? [];
+
         _host = global::Nexus.Nexus.CreateDefault(_ => _chatClientFactory(model), options =>
         {
+            var allowShell = CliApprovalGate.IsShellAllowedFromEnvironment();
+
+            options.ConfigureServices = services =>
+            {
+                services.AddSingleton<IApprovalGate>(CliApprovalGate.FromEnvironment());
+                services.AddFileChangeTracking(tracking =>
+                {
+                    tracking.BaseDirectory = projectRoot ?? Directory.GetCurrentDirectory();
+                });
+            };
+
+            options.ConfigurePermissions = permissions => permissions.Configure(permissionOptions =>
+            {
+                permissionOptions.Rules.Clear();
+                permissionOptions.DefaultAction = PermissionAction.Allow;
+
+                if (!allowShell)
+                {
+                    permissionOptions.Rules.Add(new ToolPermissionRule
+                    {
+                        Pattern = "shell",
+                        Action = PermissionAction.Deny,
+                        Reason = "Shell tool execution is disabled in Nexus.Cli by default. Set NEXUS_CLI_ALLOW_SHELL=1 to enable it.",
+                    });
+                }
+            });
+
             options.SessionTitle = key;
             options.DefaultAgentDefinition = new AgentDefinition
             {
@@ -91,16 +107,49 @@ internal sealed class ChatSession : IDisposable
             if (!string.IsNullOrWhiteSpace(sessionStoreDirectory))
                 options.ConfigureSessions = sessions => sessions.UseFileSystem(sessionStoreDirectory);
 
-            if (this._mcpServers.Count > 0)
+            if (_mcpServers.Count > 0)
             {
                 options.ConfigureMcp = mcp =>
                 {
-                    foreach (var server in this._mcpServers)
+                    foreach (var server in _mcpServers)
                         mcp.AddServer(server);
                 };
             }
         });
     }
+
+    public string Key { get; }
+
+    public string Model { get; }
+
+    public SkillDefinition Skill => _skill;
+
+    public string SkillName => _skill.Name;
+
+    public SessionId? PersistedSessionId => _sessionId;
+
+    public ChatSessionState State { get; private set; } = ChatSessionState.Idle;
+
+    public string LastOutput => _lastResponse.ToString();
+
+    public int MessageCount => _messageCount;
+
+    public IReadOnlyList<CliToolActivity> ToolActivity
+    {
+        get
+        {
+            lock (_activityGate)
+                return _toolActivity.ToArray();
+        }
+    }
+
+    public event Action<string>? OnChunk;
+
+    public event Action<ChatSession>? OnStateChanged;
+
+    public event Action<CliToolActivity>? OnToolActivity;
+
+    public event Action<TrackedFileChange>? OnFileChanged;
 
     public void SetSkill(SkillDefinition skill)
     {
@@ -111,7 +160,6 @@ internal sealed class ChatSession : IDisposable
         _skill = skill;
     }
 
-    /// <summary>Sends a user message and starts streaming the response in the background.</summary>
     public void Send(string userMessage)
     {
         if (State == ChatSessionState.Running)
@@ -131,6 +179,7 @@ internal sealed class ChatSession : IDisposable
             try
             {
                 await EnsureMcpToolsAsync(token).ConfigureAwait(false);
+                var toolNamesByCallId = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
                 AgentResult? finalResult = null;
                 await foreach (var update in _host.RunAsync(new AgentLoopOptions
@@ -150,14 +199,57 @@ internal sealed class ChatSession : IDisposable
                     if (update.SessionId.HasValue)
                         _sessionId = update.SessionId.Value;
 
-                    if (update is TextChunkLoopEvent text && !string.IsNullOrEmpty(text.Text))
+                    switch (update)
                     {
-                        _lastResponse.Append(text.Text);
-                        OnChunk?.Invoke(text.Text);
-                    }
+                        case TextChunkLoopEvent text when !string.IsNullOrEmpty(text.Text):
+                            _lastResponse.Append(text.Text);
+                            OnChunk?.Invoke(text.Text);
+                            break;
 
-                    if (update is LoopCompletedEvent completed)
-                        finalResult = completed.FinalResult;
+                        case ToolCallStartedLoopEvent started:
+                            toolNamesByCallId[started.ToolCallId] = started.ToolName;
+                            PublishToolActivity(new CliToolActivity(
+                                DateTimeOffset.UtcNow,
+                                started.ToolName,
+                                "started",
+                                $"Started {started.ToolName}."));
+                            break;
+
+                        case ToolCallProgressLoopEvent progress:
+                            PublishToolActivity(new CliToolActivity(
+                                DateTimeOffset.UtcNow,
+                                toolNamesByCallId.GetValueOrDefault(progress.ToolCallId, "tool"),
+                                "progress",
+                                progress.Message));
+                            break;
+
+                        case ToolCallCompletedLoopEvent toolCompleted:
+                            HandleCompletedToolEvent(toolCompleted, toolNamesByCallId);
+                            break;
+
+                        case ApprovalRequestedLoopEvent approval:
+                            PublishToolActivity(new CliToolActivity(
+                                DateTimeOffset.UtcNow,
+                                "approval",
+                                "approval",
+                                approval.Description));
+                            break;
+
+                        case TokenUsageLoopEvent usage:
+                            var suffix = usage.EstimatedCost.HasValue
+                                ? $", ${usage.EstimatedCost.Value:F4}"
+                                : string.Empty;
+                            PublishToolActivity(new CliToolActivity(
+                                DateTimeOffset.UtcNow,
+                                "usage",
+                                "usage",
+                                $"Tokens in/out: {usage.InputTokens}/{usage.OutputTokens}{suffix}"));
+                            break;
+
+                        case LoopCompletedEvent completed:
+                            finalResult = completed.FinalResult;
+                            break;
+                    }
                 }
 
                 finalResult ??= AgentResult.Success(_lastResponse.ToString());
@@ -179,7 +271,7 @@ internal sealed class ChatSession : IDisposable
                 if (_lastResponse.Length > 0)
                     _lastResponse.AppendLine();
 
-                _lastResponse.Append(System.Globalization.CultureInfo.InvariantCulture, $"[ERROR] {ex.Message}");
+                _lastResponse.Append(CultureInfo.InvariantCulture, $"[ERROR] {ex.Message}");
                 State = ChatSessionState.Failed;
             }
 
@@ -261,7 +353,7 @@ internal sealed class ChatSession : IDisposable
         var contextWindow = definition.ContextWindow ?? new ContextWindowOptions();
         var systemPrompt = definition.SystemPrompt;
         var modelId = definition.ModelId ?? Model;
-        var chatClient = _host.Services.GetRequiredService<Microsoft.Extensions.AI.IChatClient>();
+        var chatClient = _host.Services.GetRequiredService<IChatClient>();
 
         var result = await compaction.CompactAsync(messages, contextWindow, chatClient, systemPrompt, modelId, ct).ConfigureAwait(false);
         if (result.CompactedMessages.Count == messages.Count && result.TokensAfter >= result.TokensBefore)
@@ -292,12 +384,76 @@ internal sealed class ChatSession : IDisposable
         return new ManualCompactionResult(result.StrategyUsed, result.TokensBefore, result.TokensAfter, messages.Count, activeMessages.Count, true);
     }
 
+    public IReadOnlyList<TrackedFileChange> GetTrackedChanges()
+        => _host.Services.GetService<IFileChangeJournal>()?.ListChanges() ?? [];
+
+    public TrackedFileChange? GetTrackedChange(int? changeId = null)
+    {
+        var journal = _host.Services.GetService<IFileChangeJournal>();
+        if (journal is null)
+            return null;
+
+        return changeId.HasValue ? journal.GetChange(changeId.Value) : journal.GetLatestChange();
+    }
+
+    public Task<FileChangeRevertResult> RevertTrackedChangeAsync(int? changeId = null, CancellationToken ct = default)
+    {
+        var journal = _host.Services.GetService<IFileChangeJournal>();
+        if (journal is null)
+            return Task.FromResult(new FileChangeRevertResult(false, "No file-change journal is registered for this session."));
+
+        var target = changeId.HasValue ? journal.GetChange(changeId.Value) : journal.GetLatestChange();
+        if (target is null)
+            return Task.FromResult(new FileChangeRevertResult(false, "No tracked file change is available."));
+
+        return journal.RevertAsync(target.ChangeId, ct);
+    }
+
     public void Dispose()
     {
         _cts?.Cancel();
         _cts?.Dispose();
         _mcpInitializationGate.Dispose();
         _host.DisposeAsync().AsTask().GetAwaiter().GetResult();
+    }
+
+    private void HandleCompletedToolEvent(ToolCallCompletedLoopEvent completedTool, IReadOnlyDictionary<string, string> toolNamesByCallId)
+    {
+        var toolName = toolNamesByCallId.GetValueOrDefault(completedTool.ToolCallId, "tool");
+        var changeId = TryReadMetadataInt(completedTool.Result.Metadata, "changeId");
+        var path = TryReadMetadataString(completedTool.Result.Metadata, "path");
+        var message = completedTool.Result.IsSuccess
+            ? changeId.HasValue
+                ? $"Applied change #{changeId.Value} to {path}."
+                : $"Completed {toolName}."
+            : completedTool.Result.Error ?? $"{toolName} failed.";
+
+        PublishToolActivity(new CliToolActivity(
+            DateTimeOffset.UtcNow,
+            toolName,
+            completedTool.Result.IsSuccess ? "completed" : "failed",
+            message,
+            changeId,
+            path));
+
+        if (changeId.HasValue)
+        {
+            var change = GetTrackedChange(changeId.Value);
+            if (change is not null)
+                OnFileChanged?.Invoke(change);
+        }
+    }
+
+    private void PublishToolActivity(CliToolActivity activity)
+    {
+        lock (_activityGate)
+        {
+            _toolActivity.Add(activity);
+            if (_toolActivity.Count > 200)
+                _toolActivity.RemoveRange(0, _toolActivity.Count - 200);
+        }
+
+        OnToolActivity?.Invoke(activity);
     }
 
     private async Task EnsureMcpToolsAsync(CancellationToken ct)
@@ -355,6 +511,34 @@ internal sealed class ChatSession : IDisposable
             metadata["projectRoot"] = _projectRoot;
 
         return metadata;
+    }
+
+    private static int? TryReadMetadataInt(IReadOnlyDictionary<string, object> metadata, string key)
+    {
+        if (!metadata.TryGetValue(key, out var value) || value is null)
+            return null;
+
+        return value switch
+        {
+            int intValue => intValue,
+            long longValue => (int)longValue,
+            JsonElement { ValueKind: JsonValueKind.Number } json when json.TryGetInt32(out var number) => number,
+            string text when int.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out var number) => number,
+            _ => null,
+        };
+    }
+
+    private static string? TryReadMetadataString(IReadOnlyDictionary<string, object> metadata, string key)
+    {
+        if (!metadata.TryGetValue(key, out var value) || value is null)
+            return null;
+
+        return value switch
+        {
+            string text => text,
+            JsonElement { ValueKind: JsonValueKind.String } json => json.GetString(),
+            _ => value.ToString(),
+        };
     }
 }
 

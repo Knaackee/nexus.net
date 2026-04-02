@@ -26,5 +26,33 @@
       "skill": "coding",
       "projectRoot": "D:\\Development\\nexus\\examples\\Nexus.cli"
     }
+  },
+  {
+    "id": "9f3af594bb0c454ba09b22008797579a",
+    "title": "asdf",
+    "createdAt": "2026-04-01T19:25:54.496821+00:00",
+    "lastActivityAt": "2026-04-01T19:25:58.7261092+00:00",
+    "messageCount": 2,
+    "costSnapshot": null,
+    "metadata": {
+      "key": "asdf",
+      "model": "gpt-5-mini",
+      "skill": "coding",
+      "projectRoot": "D:\\Development\\nexus\\examples\\Nexus.cli"
+    }
+  },
+  {
+    "id": "f63a3de784404410bfe97b6ac5ead7bf",
+    "title": "test",
+    "createdAt": "2026-04-01T19:43:24.9867614+00:00",
+    "lastActivityAt": "2026-04-01T19:43:27.0906504+00:00",
+    "messageCount": 2,
+    "costSnapshot": null,
+    "metadata": {
+      "key": "test",
+      "model": "claude-opus-4.6-fast",
+      "skill": "coding",
+      "projectRoot": "D:\\Development\\nexus\\examples\\Nexus.cli"
+    }
   }
 ]

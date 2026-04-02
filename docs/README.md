@@ -80,6 +80,7 @@ Complete documentation for the Nexus Multi-Agent Orchestration Engine.
 - [Examples Index](../examples/README.md) — Canonical home for runnable scenario examples
 - [Minimal Agent](examples/minimal.md) — Single agent with tools and guardrails
 - [Multi-Agent Graph](examples/multi-agent.md) — Graph orchestration with checkpointing
+- [Chat Editing With Diff And Revert](examples/chat-editing-with-diff-and-revert.md) — Tool-driven file mutation with journaled diff and rollback
 - [Nexus CLI](examples/nexus-cli.md) — GitHub Copilot multi-chat agent
 
 ### Benchmarks

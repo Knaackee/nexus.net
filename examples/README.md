@@ -15,6 +15,7 @@ Each scenario example should contain:
 - [Chat Session With Memory](Nexus.Examples.ChatSessionWithMemory/README.md)
 - [Human-Approved Workflow](Nexus.Examples.HumanApprovedWorkflow/README.md)
 - [Parallel Sub-Agents And Workflow Fan-Out](Nexus.Examples.ParallelSubAgentsAndWorkflowFanOut/README.md)
+- [Chat Editing With Diff And Revert](Nexus.Examples.ChatEditingWithDiffAndRevert/README.md)
 
 ## General Examples
 

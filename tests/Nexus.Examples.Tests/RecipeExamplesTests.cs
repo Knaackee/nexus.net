@@ -8,9 +8,11 @@ using Nexus.Core.Agents;
 using Nexus.Core.Configuration;
 using Nexus.Core.Contracts;
 using Nexus.Core.Tools;
+using Nexus.Configuration;
 using Nexus.Memory;
 using Nexus.Orchestration;
 using Nexus.Orchestration.Defaults;
+using Nexus.Permissions;
 using Nexus.Sessions;
 using Nexus.Testing.Mocks;
 using Nexus.Tools.Standard;
@@ -92,6 +94,68 @@ public sealed class RecipeExamplesTests
 
         sessions.Should().ContainSingle();
         sessions[0].MessageCount.Should().Be(4);
+    }
+
+    [Fact]
+    public async Task ChatEditingWithDiffAndRevert_TracksDiffAndCanRevert()
+    {
+        var workspaceRoot = Path.Combine(Path.GetTempPath(), "nexus-example-edit-tests", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(workspaceRoot);
+
+        var filePath = Path.Combine(workspaceRoot, "notes.txt");
+        await File.WriteAllTextAsync(filePath, "alpha" + Environment.NewLine + "beta" + Environment.NewLine);
+
+        await using var host = global::Nexus.Nexus.CreateDefault(_ => new FakeChatClient()
+            .WithFunctionCallResponse(new FunctionCallContent("call-1", "file_edit", new Dictionary<string, object?>
+            {
+                ["path"] = "notes.txt",
+                ["oldText"] = "beta",
+                ["newText"] = "gamma",
+            }))
+            .WithResponse("Updated notes.txt and attached the change summary."), options =>
+        {
+            options.SessionTitle = "example-edit";
+            options.DefaultAgentDefinition = new AgentDefinition
+            {
+                Name = "FileEditor",
+                ToolNames = ["file_edit"],
+                SystemPrompt = "Use the file_edit tool when a file needs to be updated.",
+            };
+            options.ConfigureConfiguration = configuration => configuration.SetProjectRoot(workspaceRoot);
+            options.ConfigureTools = tools => tools
+                .Only(StandardToolCategory.FileSystem)
+                .Configure(toolOptions =>
+                {
+                    toolOptions.BaseDirectory = workspaceRoot;
+                    toolOptions.WorkingDirectory = workspaceRoot;
+                });
+            options.ConfigurePermissions = permissions => permissions.UsePreset(PermissionPreset.AllowAll);
+            options.ConfigureServices = services => services.AddFileChangeTracking(tracking => tracking.BaseDirectory = workspaceRoot);
+        });
+
+        await DrainAsync(host.RunAsync(new AgentLoopOptions
+        {
+            UserInput = "Update notes.txt so beta becomes gamma.",
+            SessionTitle = "example-edit",
+            AgentDefinition = new AgentDefinition
+            {
+                Name = "FileEditor",
+                ToolNames = ["file_edit"],
+                SystemPrompt = "Use the file_edit tool when a file needs to be updated.",
+            },
+        }));
+
+        var journal = host.Services.GetRequiredService<IFileChangeJournal>();
+        var change = journal.ListChanges().Single();
+
+        (await File.ReadAllTextAsync(filePath)).Should().Contain("gamma");
+        change.Path.Should().Be("notes.txt");
+        change.UnifiedDiff.Should().Contain("-beta");
+        change.UnifiedDiff.Should().Contain("+gamma");
+
+        var revert = await journal.RevertAsync(change.ChangeId);
+        revert.Succeeded.Should().BeTrue();
+        (await File.ReadAllTextAsync(filePath)).Should().Contain("beta");
     }
 
     [Fact]

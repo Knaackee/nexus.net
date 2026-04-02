@@ -12,5 +12,6 @@
     <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2" />
     <PackageReference Include="FluentAssertions" Version="7.2.0" />
     <ProjectReference Include="..\..\examples\Nexus.Cli\Nexus.Cli.csproj" />
+    <ProjectReference Include="..\..\src\Nexus.Testing\Nexus.Testing.csproj" />
   </ItemGroup>
 </Project>
