@@ -59,9 +59,8 @@ internal sealed class LiveOllamaChatClient : IChatClient
         using var reader = new StreamReader(stream, Encoding.UTF8);
 
         JsonElement? finalPayload = null;
-        while (!reader.EndOfStream)
+        while (await reader.ReadLineAsync(cancellationToken).ConfigureAwait(false) is { } line)
         {
-            var line = await reader.ReadLineAsync(cancellationToken).ConfigureAwait(false);
             if (string.IsNullOrWhiteSpace(line))
                 continue;
 

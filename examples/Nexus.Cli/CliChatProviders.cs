@@ -242,9 +242,8 @@ internal sealed class OllamaChatClient : IChatClient
 
 		JsonElement? finalPayload = null;
 		var generatedCallId = 0;
-		while (!reader.EndOfStream)
+		while (await reader.ReadLineAsync(cancellationToken).ConfigureAwait(false) is { } line)
 		{
-			var line = await reader.ReadLineAsync(cancellationToken).ConfigureAwait(false);
 			if (string.IsNullOrWhiteSpace(line))
 				continue;
 
