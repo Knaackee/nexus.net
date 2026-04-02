@@ -4,6 +4,19 @@ All notable changes to Nexus will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.2.0] — 2026-04-02
+
+### Added
+
+- Canonical package index at `docs/api/README.md` covering the full `src` package surface
+- Dedicated package docs for AgentLoop, Auth.OAuth2, Commands, Compaction, Configuration, Defaults, Hosting.AspNetCore, Orchestration.Checkpointing, Sessions, Skills, Telemetry, Tools.Standard, and split protocol pages for MCP, A2A, and AG-UI
+
+### Changed
+
+- Strengthened `docs/llms/README.md` for low-token first-hop routing by problem shape and package family
+- Improved root and docs index discoverability so README, docs index, API index, guides, recipes, and examples route consistently
+- Refined key guides and recipes with clearer scope boundaries, quick selectors, and stronger next-hop navigation for both humans and LLMs
+
 ## [0.1.0] — 2026-04-02
 
 ### Added
