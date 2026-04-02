@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.3.0] — 2026-04-02
+
 ### Added
 
 - Structured Priority-1 streaming support for reasoning, tool-use, approval requests, and ask-user interaction requests across agent events, AG-UI, and session transcripts
