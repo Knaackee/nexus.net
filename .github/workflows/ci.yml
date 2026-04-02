@@ -30,7 +30,18 @@ jobs:
       run: dotnet build Nexus.sln --no-restore --configuration Release
 
     - name: Test
-      run: dotnet test Nexus.sln --no-build --configuration Release --verbosity normal --logger "trx;LogFileName=test-results.trx" --collect:"XPlat Code Coverage" --results-directory TestResults --filter "FullyQualifiedName!~Nexus.Live.Integration.Tests"
+      shell: pwsh
+      run: |
+        $testProjects = Get-ChildItem tests -Recurse -Filter *.csproj |
+          Where-Object { $_.Name -notin @('Nexus.Cli.Tests.csproj', 'Nexus.Live.Integration.Tests.csproj') } |
+          Sort-Object FullName
+
+        foreach ($project in $testProjects) {
+          dotnet test $project.FullName --no-build --configuration Release --verbosity normal --logger "trx;LogFileName=$($project.BaseName).trx" --collect:"XPlat Code Coverage" --results-directory TestResults
+          if ($LASTEXITCODE -ne 0) {
+            exit $LASTEXITCODE
+          }
+        }
 
     - name: Upload test results
       uses: actions/upload-artifact@v4

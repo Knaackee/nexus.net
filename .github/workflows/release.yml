@@ -51,7 +51,18 @@ jobs:
       - run: dotnet build Nexus.sln -c Release --no-restore
 
       - name: Run tests
-        run: dotnet test Nexus.sln -c Release --no-build --verbosity normal --logger "trx;LogFileName=results.trx" --results-directory TestResults --filter "FullyQualifiedName!~Nexus.Cli.Tests"
+        shell: pwsh
+        run: |
+          $testProjects = Get-ChildItem tests -Recurse -Filter *.csproj |
+            Where-Object { $_.Name -notin @('Nexus.Cli.Tests.csproj', 'Nexus.Live.Integration.Tests.csproj') } |
+            Sort-Object FullName
+
+          foreach ($project in $testProjects) {
+            dotnet test $project.FullName -c Release --no-build --verbosity normal --logger "trx;LogFileName=$($project.BaseName).trx" --results-directory TestResults
+            if ($LASTEXITCODE -ne 0) {
+              exit $LASTEXITCODE
+            }
+          }
 
       - name: Pack NuGet packages
         run: |
