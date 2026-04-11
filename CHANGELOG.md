@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.3.5] — 2026-04-11
+
 ### Fixed
 
 - `ask_user` argument parsing now accepts legacy `inputType` when `type` is missing and normalizes typed modes case-insensitively (`freeText`, `confirm`, `select`, `multiSelect`, `secret`)
