@@ -56,7 +56,10 @@ public class ChatAgent : IAgent
         var messages = new List<ChatMessage>();
         var runtimeToolNames = ResolveToolNames(task.AgentDefinition);
 
-        var systemPrompt = BuildSystemPrompt(CombinePrompts(_options.SystemPrompt, task.AgentDefinition?.SystemPrompt), _options.IncludeExecutionContext);
+        var combinedPrompt = CombinePrompts(_options.SystemPrompt, task.AgentDefinition?.SystemPrompt);
+        if (runtimeToolNames.Contains(AskUserPolicy.ToolName, StringComparer.Ordinal))
+            combinedPrompt = CombinePrompts(combinedPrompt, AskUserPolicy.Text);
+        var systemPrompt = BuildSystemPrompt(combinedPrompt, _options.IncludeExecutionContext);
         if (!string.IsNullOrWhiteSpace(systemPrompt))
             messages.Add(new ChatMessage(ChatRole.System, systemPrompt));
 

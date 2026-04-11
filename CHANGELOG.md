@@ -6,6 +6,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.3.1] — 2026-04-11
+
+### Added
+
+- `AskUserPolicy`: compact prompt policy automatically appended to agent system prompts when `ask_user` is present in `ToolNames` — guides the LLM to ask before acting on ambiguous intent, confirm before destructive/costly actions, limit unverified assumptions, and prefer `confirm`/`select` question types over free text
+- Policy is conditional: injected only when `ask_user` is in the active tool list, leaving all other agent system prompts untouched
+- 9 new tests covering policy injection, ambiguous-intent and risky-action scenarios, and full e2e message verification
+- Updated docs: `nexus-tools-standard`, `nexus-orchestration` API references, and `testing` guide
+
 ## [0.3.0] — 2026-04-02
 
 ### Added

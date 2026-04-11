@@ -165,3 +165,13 @@ public record OrchestrationSnapshot
 ```csharp
 public enum TaskNodeState { NotStarted, Running, Completed, Failed, Skipped }
 ```
+
+## ask_user Prompt Policy
+
+`ChatAgent` automatically appends a compact usage policy to the agent system prompt when `ask_user` is present in `AgentDefinition.ToolNames`. The policy is injected at execution time and does not modify `AgentDefinition` itself.
+
+**Injection is conditional:** no injection if `ask_user` is absent — host system prompts are never polluted unnecessarily.
+
+**Injection order:** user prompt → (policy appended) → execution-context block (if enabled). The user-supplied `SystemPrompt` is always preserved verbatim at the top.
+
+See [Nexus.Tools.Standard](nexus-tools-standard.md#ask_user-prompt-policy) for the full policy text and usage examples.

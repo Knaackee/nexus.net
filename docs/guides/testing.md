@@ -187,6 +187,84 @@ public async Task Graph_executes_in_dependency_order()
 }
 ```
 
+### Testing ask_user Policy Behavior
+
+When an agent has `ask_user` in its `ToolNames`, the framework injects a compact prompt policy automatically. Use `FakeChatClient` to script the interaction and assert the correct event ordering.
+
+**Verify policy injection:**
+
+```csharp
+[Fact]
+public async Task Policy_Is_Injected_When_AskUser_Available()
+{
+    var client = new FakeChatClient("done");
+    // ... build services with IAgentLoop ...
+
+    await DrainAsync(loop.RunAsync(new AgentLoopOptions
+    {
+        AgentDefinition = new AgentDefinition { Name = "assistant", ToolNames = ["ask_user"] },
+        UserInput = "help",
+    }));
+
+    var systemText = client.ReceivedMessages[0]
+        .Single(m => m.Role == ChatRole.System).Text;
+
+    Assert.Contains("ask_user", systemText);
+    Assert.Contains("irreversible", systemText);
+}
+```
+
+**Ambiguous intent — agent asks before acting:**
+
+```csharp
+[Fact]
+public async Task AmbiguousIntent_Emits_SelectQuestion_Before_Text()
+{
+    var client = new FakeChatClient()
+        .WithFunctionCallResponse(new FunctionCallContent("q-1", "ask_user",
+            new Dictionary<string, object?> { ["type"] = "select", ["question"] = "Which file?" }))
+        .WithResponse("Updated the file.");
+
+    // register MockTool.AlwaysReturns("ask_user", "Program.cs") in the registry
+    // ... build loop ...
+
+    var events = await DrainToListAsync(loop.RunAsync(new AgentLoopOptions
+    {
+        AgentDefinition = new AgentDefinition { Name = "assistant", ToolNames = ["ask_user"] },
+        UserInput = "Update the startup file",
+    }));
+
+    var askEvent = events.OfType<UserInputRequestedLoopEvent>().Single();
+    Assert.Equal("select", askEvent.Request.InputType);
+    // ask_user event must appear before any text chunk
+    Assert.True(events.IndexOf(askEvent) < events.IndexOf(events.OfType<TextChunkLoopEvent>().First()));
+}
+```
+
+**Risky action — confirm then execute:**
+
+```csharp
+[Fact]
+public async Task RiskyAction_Confirm_Before_Destructive_Tool()
+{
+    var client = new FakeChatClient()
+        .WithFunctionCallResponse(new FunctionCallContent("c-1", "ask_user",
+            new Dictionary<string, object?> { ["type"] = "confirm", ["question"] = "Delete all logs?" }))
+        .WithFunctionCallResponse(new FunctionCallContent("d-1", "delete_logs",
+            new Dictionary<string, object?> { }))
+        .WithResponse("Done.");
+
+    // register MockTool.AlwaysReturns("ask_user", "yes") and MockTool.AlwaysReturns("delete_logs", "ok")
+    // ... build loop, run ...
+
+    var confirmIndex = events.IndexOf(events.OfType<UserInputRequestedLoopEvent>().Single());
+    var deleteIndex  = events.IndexOf(events.OfType<ToolCallStartedLoopEvent>()
+                          .First(e => e.ToolName == "delete_logs"));
+
+    Assert.True(deleteIndex > confirmIndex); // confirm must precede destructive call
+}
+```
+
 ### Integration Testing
 
 For tests that hit real LLM APIs, use environment variables and conditional attributes:

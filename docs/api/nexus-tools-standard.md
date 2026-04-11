@@ -85,6 +85,35 @@ services.AddNexus(builder =>
 
 This package also ensures that the `IToolRegistry` is built from the `ITool` implementations registered in DI. That makes DI-registered tools discoverable without a separate manual registry step.
 
+### ask_user Prompt Policy
+
+When `ask_user` is included in an agent's `ToolNames`, the framework automatically appends a compact usage policy to the agent's system prompt. The policy instructs the agent to:
+
+1. Ask before acting when user intent has ≥ 2 plausible interpretations (prefer `type=select` or `type=confirm`).
+2. Always confirm before destructive, irreversible, or costly actions unless a permission gate already blocked them.
+3. Limit unverified assumptions to 1 per turn; ask for clarification if more are needed.
+4. Never silently override stated user preferences.
+5. Keep questions short and decision-oriented; use `confirm`/`select` over `freeText` when choices are enumerable.
+
+The policy is **not** injected when `ask_user` is absent from `ToolNames` — it does not pollute system prompts of agents that have no interaction channel. The text is minimal to preserve space in user-owned system prompts.
+
+```csharp
+// Policy injected automatically:
+new AgentDefinition
+{
+    Name = "assistant",
+    ToolNames = ["ask_user"],           // policy appended to SystemPrompt
+    SystemPrompt = "You are helpful.",  // preserved as-is, policy appended below
+}
+
+// No injection:
+new AgentDefinition
+{
+    Name = "assistant",
+    ToolNames = [],                     // no ask_user → no policy
+}
+```
+
 ## When To Use It
 
 - local coding agents need a practical default tool surface
