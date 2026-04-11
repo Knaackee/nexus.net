@@ -172,6 +172,66 @@ public sealed class AskUserPolicyTests
         inputRequested.Request.Question.Should().Be("Do you want to overwrite the existing file?");
     }
 
+    [Fact]
+    public async Task AmbiguousIntent_AskUser_InputTypeAlias_Select_Emitted_Before_Final_Answer()
+    {
+        var client = new FakeChatClient()
+            .WithFunctionCallResponse(new FunctionCallContent("q-3", "ask_user", new Dictionary<string, object?>
+            {
+                ["inputType"] = "SELECT",
+                ["question"] = "Pick target file",
+                ["options"] = (object)FileOptions,
+            }))
+            .WithResponse("Updated file.");
+
+        using var services = BuildServices(client, toolNames: ["ask_user"]);
+        services.GetRequiredService<IToolRegistry>().Register(MockTool.AlwaysReturns("ask_user", "Program.cs"));
+        var loop = services.GetRequiredService<IAgentLoop>();
+
+        var events = new List<AgentLoopEvent>();
+        await foreach (var evt in loop.RunAsync(new AgentLoopOptions
+        {
+            AgentDefinition = new AgentDefinition { Name = "assistant", ToolNames = ["ask_user"] },
+            UserInput = "Update config file",
+        }))
+        {
+            events.Add(evt);
+        }
+
+        var inputRequested = events.OfType<UserInputRequestedLoopEvent>().Single();
+        inputRequested.Request.InputType.Should().Be("select");
+        inputRequested.Request.Options.Should().ContainInOrder("Program.cs", "Startup.cs");
+    }
+
+    [Fact]
+    public async Task AmbiguousIntent_AskUser_Unknown_Type_Does_Not_Emit_UserInput_Request()
+    {
+        var client = new FakeChatClient()
+            .WithFunctionCallResponse(new FunctionCallContent("q-4", "ask_user", new Dictionary<string, object?>
+            {
+                ["type"] = "dropdown",
+                ["question"] = "Pick target file",
+                ["options"] = (object)FileOptions,
+            }))
+            .WithResponse("I cannot ask that question type.");
+
+        using var services = BuildServices(client, toolNames: ["ask_user"]);
+        services.GetRequiredService<IToolRegistry>().Register(MockTool.AlwaysReturns("ask_user", "Program.cs"));
+        var loop = services.GetRequiredService<IAgentLoop>();
+
+        var events = new List<AgentLoopEvent>();
+        await foreach (var evt in loop.RunAsync(new AgentLoopOptions
+        {
+            AgentDefinition = new AgentDefinition { Name = "assistant", ToolNames = ["ask_user"] },
+            UserInput = "Update config file",
+        }))
+        {
+            events.Add(evt);
+        }
+
+        events.OfType<UserInputRequestedLoopEvent>().Should().BeEmpty();
+    }
+
     // -------------------------------------------------------------------------
     // Risky action: agent confirms via ask_user before destructive step
     // -------------------------------------------------------------------------

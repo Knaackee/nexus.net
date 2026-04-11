@@ -114,8 +114,9 @@ public sealed class StandardToolTests
     [Fact]
     public async Task AskUserTool_Returns_Response_From_Interaction_Service()
     {
+        var interaction = new StubUserInteraction(new UserResponse("yes"));
         var services = new ServiceCollection();
-        services.AddSingleton<IUserInteraction>(new StubUserInteraction(new UserResponse("yes")));
+        services.AddSingleton<IUserInteraction>(interaction);
         using var serviceProvider = services.BuildServiceProvider();
         var tool = new AskUserTool(serviceProvider);
 
@@ -125,6 +126,138 @@ public sealed class StandardToolTests
 
         result.IsSuccess.Should().BeTrue();
         ((UserResponse)result.Value!).Answer.Should().Be("yes");
+        interaction.LastQuestion.Should().BeOfType<ConfirmQuestion>();
+    }
+
+    [Fact]
+    public async Task AskUserTool_InputType_Select_With_Options_Creates_SelectQuestion()
+    {
+        var interaction = new StubUserInteraction(new UserResponse("Program.cs"));
+        var services = new ServiceCollection();
+        services.AddSingleton<IUserInteraction>(interaction);
+        using var serviceProvider = services.BuildServiceProvider();
+        var tool = new AskUserTool(serviceProvider);
+
+        var result = await tool.ExecuteAsync(Parse("""
+            { "inputType": "select", "question": "Pick file", "options": ["Program.cs", "Startup.cs"] }
+            """), CreateToolContext(), CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        var question = interaction.LastQuestion.Should().BeOfType<SelectQuestion>().Subject;
+        question.Options.Should().ContainInOrder("Program.cs", "Startup.cs");
+    }
+
+    [Fact]
+    public async Task AskUserTool_Type_MultiSelect_With_Options_Creates_MultiSelectQuestion()
+    {
+        var interaction = new StubUserInteraction(new UserResponse("Program.cs,Startup.cs"));
+        var services = new ServiceCollection();
+        services.AddSingleton<IUserInteraction>(interaction);
+        using var serviceProvider = services.BuildServiceProvider();
+        var tool = new AskUserTool(serviceProvider);
+
+        var result = await tool.ExecuteAsync(Parse("""
+            { "type": "multiSelect", "question": "Pick files", "options": ["Program.cs", "Startup.cs"] }
+            """), CreateToolContext(), CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        var question = interaction.LastQuestion.Should().BeOfType<MultiSelectQuestion>().Subject;
+        question.Options.Should().ContainInOrder("Program.cs", "Startup.cs");
+    }
+
+    [Fact]
+    public async Task AskUserTool_Type_Secret_Creates_SecretQuestion()
+    {
+        var interaction = new StubUserInteraction(new UserResponse("token"));
+        var services = new ServiceCollection();
+        services.AddSingleton<IUserInteraction>(interaction);
+        using var serviceProvider = services.BuildServiceProvider();
+        var tool = new AskUserTool(serviceProvider);
+
+        var result = await tool.ExecuteAsync(Parse("""
+            { "type": "secret", "question": "API key?" }
+            """), CreateToolContext(), CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        interaction.LastQuestion.Should().BeOfType<SecretQuestion>();
+    }
+
+    [Fact]
+    public async Task AskUserTool_Unknown_Type_Fails_With_Actionable_Error()
+    {
+        var interaction = new StubUserInteraction(new UserResponse("ignored"));
+        var services = new ServiceCollection();
+        services.AddSingleton<IUserInteraction>(interaction);
+        using var serviceProvider = services.BuildServiceProvider();
+        var tool = new AskUserTool(serviceProvider);
+
+        var result = await tool.ExecuteAsync(Parse("""
+            { "type": "dropdown", "question": "Pick one" }
+            """), CreateToolContext(), CancellationToken.None);
+
+        result.IsSuccess.Should().BeFalse();
+        result.Error.Should().Contain("Unsupported ask_user type");
+    }
+
+    [Theory]
+    [InlineData("select")]
+    [InlineData("multiSelect")]
+    public async Task AskUserTool_Select_Modes_Without_Options_Fail(string inputType)
+    {
+        var interaction = new StubUserInteraction(new UserResponse("ignored"));
+        var services = new ServiceCollection();
+        services.AddSingleton<IUserInteraction>(interaction);
+        using var serviceProvider = services.BuildServiceProvider();
+        var tool = new AskUserTool(serviceProvider);
+
+        var result = await tool.ExecuteAsync(Parse($$"""
+            { "type": "{{inputType}}", "question": "Pick one" }
+            """), CreateToolContext(), CancellationToken.None);
+
+        result.IsSuccess.Should().BeFalse();
+        result.Error.Should().Contain("options");
+    }
+
+    [Fact]
+    public async Task AskUserTool_Type_Takes_Precedence_When_InputType_Mismatches()
+    {
+        var interaction = new StubUserInteraction(new UserResponse("yes"));
+        var services = new ServiceCollection();
+        services.AddSingleton<IUserInteraction>(interaction);
+        using var serviceProvider = services.BuildServiceProvider();
+        var tool = new AskUserTool(serviceProvider);
+
+        var result = await tool.ExecuteAsync(Parse("""
+            { "type": "confirm", "inputType": "select", "question": "Proceed?", "options": ["yes", "no"] }
+            """), CreateToolContext(), CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        interaction.LastQuestion.Should().BeOfType<ConfirmQuestion>();
+    }
+
+    [Theory]
+    [InlineData("SELECT", typeof(SelectQuestion))]
+    [InlineData("MultiSelect", typeof(MultiSelectQuestion))]
+    [InlineData("CONFIRM", typeof(ConfirmQuestion))]
+    [InlineData("Secret", typeof(SecretQuestion))]
+    [InlineData("freetext", typeof(FreeTextQuestion))]
+    public async Task AskUserTool_Normalizes_Input_Types_Case_Insensitively(string inputType, Type expectedQuestionType)
+    {
+        var interaction = new StubUserInteraction(new UserResponse("ok"));
+        var services = new ServiceCollection();
+        services.AddSingleton<IUserInteraction>(interaction);
+        using var serviceProvider = services.BuildServiceProvider();
+        var tool = new AskUserTool(serviceProvider);
+
+        var json = inputType.Equals("SELECT", StringComparison.OrdinalIgnoreCase)
+            || inputType.Equals("MultiSelect", StringComparison.OrdinalIgnoreCase)
+            ? $$"""{ "type": "{{inputType}}", "question": "Q", "options": ["one"] }"""
+            : $$"""{ "type": "{{inputType}}", "question": "Q" }""";
+
+        var result = await tool.ExecuteAsync(Parse(json), CreateToolContext(), CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        interaction.LastQuestion.Should().BeOfType(expectedQuestionType);
     }
 
     [Fact]
@@ -352,6 +485,8 @@ public sealed class StandardToolTests
     private sealed class StubUserInteraction : IUserInteraction
     {
         private readonly UserResponse _response;
+        public UserQuestion? LastQuestion { get; private set; }
+        public UserInteractionOptions? LastOptions { get; private set; }
 
         public StubUserInteraction(UserResponse response)
         {
@@ -359,7 +494,11 @@ public sealed class StandardToolTests
         }
 
         public Task<UserResponse> AskAsync(UserQuestion question, UserInteractionOptions? options = null, CancellationToken ct = default)
-            => Task.FromResult(_response);
+        {
+            LastQuestion = question;
+            LastOptions = options;
+            return Task.FromResult(_response);
+        }
     }
 
     private sealed class RecordingAgentPool : IAgentPool
