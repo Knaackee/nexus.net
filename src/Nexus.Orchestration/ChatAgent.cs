@@ -397,15 +397,74 @@ public class ChatAgent : IAgent
             return false;
         }
 
+        if (!TryResolveInputType(inputJson, out var inputType))
+        {
+            request = default!;
+            return false;
+        }
+
+        var options = ReadOptionalStringArray(inputJson, "options");
+        if (inputType is "select" or "multiSelect" && options.Length == 0)
+        {
+            request = default!;
+            return false;
+        }
+
         request = new UserInputRequest(
-            InputType: ReadOptionalString(inputJson, "type") ?? "freeText",
+            InputType: inputType,
             Question: ReadOptionalString(inputJson, "question") ?? string.Empty,
-            Options: ReadOptionalStringArray(inputJson, "options"),
+            Options: options,
             Placeholder: ReadOptionalString(inputJson, "placeholder"),
             IsOptional: ReadOptionalBool(inputJson, "isOptional") ?? false,
             TimeoutSeconds: ReadOptionalInt(inputJson, "timeoutSeconds"),
             Reason: ReadOptionalString(inputJson, "reason"));
         return true;
+    }
+
+    private static bool TryResolveInputType(JsonElement inputJson, out string inputType)
+    {
+        var rawType = ReadOptionalString(inputJson, "type");
+        var rawInputType = ReadOptionalString(inputJson, "inputType");
+
+        if (!string.IsNullOrWhiteSpace(rawType))
+        {
+            if (TryNormalizeInputType(rawType!, out inputType))
+                return true;
+
+            inputType = default!;
+            return false;
+        }
+
+        if (!string.IsNullOrWhiteSpace(rawInputType))
+            return TryNormalizeInputType(rawInputType!, out inputType);
+
+        inputType = "freeText";
+        return true;
+    }
+
+    private static bool TryNormalizeInputType(string value, out string normalized)
+    {
+        switch (value.ToLowerInvariant())
+        {
+            case "freetext":
+                normalized = "freeText";
+                return true;
+            case "confirm":
+                normalized = "confirm";
+                return true;
+            case "select":
+                normalized = "select";
+                return true;
+            case "multiselect":
+                normalized = "multiSelect";
+                return true;
+            case "secret":
+                normalized = "secret";
+                return true;
+            default:
+                normalized = default!;
+                return false;
+        }
     }
 
     private static string? ReadOptionalString(JsonElement element, string propertyName)

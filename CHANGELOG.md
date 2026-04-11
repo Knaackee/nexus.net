@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Fixed
+
+- `ask_user` argument parsing now accepts legacy `inputType` when `type` is missing and normalizes typed modes case-insensitively (`freeText`, `confirm`, `select`, `multiSelect`, `secret`)
+- `ask_user` no longer silently downgrades unknown typed modes to `freeText`; invalid `type`/`inputType` now fail with actionable validation errors
+- `select` and `multiSelect` now require non-empty `options`; malformed payloads fail explicitly instead of emitting ambiguous prompts
+- Orchestration `UserInputRequest` emission now resolves normalized typed mode consistently and avoids emitting malformed typed requests
+- Added diagnostics counters for ask_user parsing source, unknown/mismatch values, missing options validation, and resolved input type distribution
+
 ## [0.3.1] — 2026-04-11
 
 ### Added
