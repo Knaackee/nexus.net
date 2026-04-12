@@ -6,6 +6,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.3.6] — 2026-04-12
+
+### Changed
+
+- Hardened injected `AskUserPolicy` system guidance so agents must prefer `ask_user` for decision points and avoid plain-text decision menus when tool is available
+- Added explicit guidance for mandatory ask_user situations (ambiguity, missing required parameters, multiple execution paths, risky/irreversible actions)
+- Clarified canonical typed-question usage in policy text (`confirm`, `select`, `multiSelect`, `freeText`, `secret`) and fallback behavior when ask_user is unavailable
+
+### Tests
+
+- Updated policy assertion markers in `Nexus.AgentLoop.Tests` to validate hardened policy injection behavior
+- Verified ask_user-related suites: `Nexus.AgentLoop.Tests`, `Nexus.Orchestration.Tests`, and `Nexus.Tools.Standard.Tests`
+
 ## [0.3.5] — 2026-04-11
 
 ### Fixed

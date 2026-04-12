@@ -44,8 +44,8 @@ public sealed class AskUserPolicyTests
 
         systemMessage.Should().NotBeNull();
         systemMessage!.Text.Should().Contain("ask_user");
-        systemMessage.Text.Should().Contain("interpretations");
-        systemMessage.Text.Should().Contain("irreversible");
+        systemMessage.Text.Should().Contain("do not ask decision menus in plain text");
+        systemMessage.Text.Should().Contain("Mandatory when intent ambiguous");
     }
 
     [Fact]
@@ -70,8 +70,8 @@ public sealed class AskUserPolicyTests
             .FirstOrDefault(m => m.Role == ChatRole.System);
 
         systemMessage.Should().NotBeNull();
-        systemMessage!.Text.Should().NotContain("interpretations");
-        systemMessage.Text.Should().NotContain("irreversible");
+        systemMessage!.Text.Should().NotContain("do not ask decision menus in plain text");
+        systemMessage.Text.Should().NotContain("Mandatory when intent ambiguous");
     }
 
     [Fact]
@@ -349,7 +349,7 @@ public sealed class AskUserPolicyTests
 
         systemText.Should().Contain("You are a deployment assistant.");
         systemText.Should().Contain("ask_user");
-        systemText.Should().Contain("irreversible");
+        systemText.Should().Contain("do not ask decision menus in plain text");
         systemText.Should().Contain("confirm");
     }
 
@@ -375,8 +375,8 @@ public sealed class AskUserPolicyTests
         var systemText = receivedTurn.Single(m => m.Role == ChatRole.System).Text ?? "";
 
         // Policy markers must be absent
-        systemText.Should().NotContain("interpretations");
-        systemText.Should().NotContain("irreversible", because: "policy must not be injected without ask_user tool");
+        systemText.Should().NotContain("do not ask decision menus in plain text");
+        systemText.Should().NotContain("Mandatory when intent ambiguous", because: "policy must not be injected without ask_user tool");
     }
 
     // -------------------------------------------------------------------------
